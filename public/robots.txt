@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://en1gm-a.github.io/sitemap.xml
