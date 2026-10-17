@@ -8,8 +8,8 @@ export const reveal = {
   transition: { type: "spring", bounce: 0, visualDuration: 0.7 },
 } as const
 
-/** Section title: letters flip up in 3D, then a short signal glitch as they land and on hover. */
-export function SectionHeading({ index, label, title }: { index: string; label: string; title: string }) {
+/** Section title: letters flip up in 3D with a short signal glitch; the note underneath adds facts the title doesn't */
+export function SectionHeading({ title, note }: { title: string; note: string }) {
   const reduce = useReducedMotion()
   const [glitch, setGlitch] = useState(false)
   const pulse = () => {
@@ -20,11 +20,8 @@ export function SectionHeading({ index, label, title }: { index: string; label: 
 
   return (
     <header className="mb-10 sm:mb-14">
-      <motion.p {...reveal} className="label">
-        <span className="text-cyan">{index}</span> — {label}
-      </motion.p>
       <motion.h2
-        className="display glitch mt-3 text-[clamp(56px,11vw,150px)] text-ink"
+        className="display glitch text-[clamp(56px,11vw,150px)] text-ink"
         style={{ perspective: 900 }}
         data-text={title}
         data-glitch={glitch ? "on" : "off"}
@@ -40,7 +37,7 @@ export function SectionHeading({ index, label, title }: { index: string; label: 
           {title.split("").map((ch, i) => (
             <motion.span
               key={i}
-              className="silver inline-block origin-bottom"
+              className="inline-block origin-bottom"
               variants={{
                 hidden: { opacity: 0, rotateX: -100, y: "0.25em" },
                 shown: { opacity: 1, rotateX: 0, y: "0em", transition: { type: "spring", bounce: 0.25, visualDuration: 0.7 } },
@@ -51,6 +48,9 @@ export function SectionHeading({ index, label, title }: { index: string; label: 
           ))}
         </span>
       </motion.h2>
+      <motion.p {...reveal} className="mt-4 max-w-2xl text-dim sm:text-lg">
+        {note}
+      </motion.p>
     </header>
   )
 }

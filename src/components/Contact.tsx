@@ -21,7 +21,7 @@ export function Contact() {
 
   return (
     <section id="contact" className="gutter relative scroll-mt-16 py-24 sm:py-32">
-      <SectionHeading index="04" label="Open a secure channel" title="Contact" />
+      <SectionHeading title="Contact" note="Email is the best way to reach me. GitHub and Facebook are below." />
 
       <motion.div {...reveal} className="panel brackets relative overflow-hidden rounded-2xl">
         <div className="border-b border-line px-6 py-4 font-mono text-[13px] text-faint sm:px-9">

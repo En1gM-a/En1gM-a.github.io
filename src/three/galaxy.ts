@@ -164,7 +164,7 @@ const PATH = [
   new THREE.Vector3(0.6, 2.2, 7.5),
 ]
 const LOOK = [
-  new THREE.Vector3(-4, -1.9, 0),
+  new THREE.Vector3(5.2, -1.9, 0),
   new THREE.Vector3(1.5, 0.4, -5.5),
   new THREE.Vector3(-4.5, 0, -1.5),
   new THREE.Vector3(1.5, 1.2, -6),

@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react"
-import { AnimatePresence, motion, useReducedMotion, useScroll, useTransform, type MotionValue } from "motion/react"
+import { AnimatePresence, motion, useReducedMotion, useScroll, useTransform } from "motion/react"
 import { BigBang } from "./BigBang"
 import { ParticlePortrait } from "./ParticlePortrait"
 import { ArrowDown } from "./icons"
@@ -163,76 +163,17 @@ function IntroStage({ stage, onSkip }: { stage: number; onSkip: () => void }) {
   )
 }
 
-/** The uncropped photo in a holographic frame shaped exactly like the picture */
-function PhotoFrame({
-  frameRef,
-  settled,
-  assembled,
-  scrollFade,
-}: {
-  frameRef: React.RefObject<HTMLDivElement | null>
-  settled: boolean
-  assembled: boolean
-  scrollFade: MotionValue<number>
-}) {
-  return (
-    <motion.div
-      ref={frameRef}
-      className="absolute top-[13vh] left-1/2 z-[5] aspect-[416/952] h-[46vh] -translate-x-1/2 lg:top-auto lg:right-[var(--gutter)] lg:bottom-[clamp(28px,7vh,84px)] lg:left-auto lg:h-[72vh] lg:translate-x-0 xl:h-[76vh]"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: settled ? 1 : 0 }}
-      transition={{ duration: 0.8 }}
-    >
-      <p className="label absolute -top-7 left-0 flex items-center gap-2 whitespace-nowrap">
-        <span className="size-1.5 rounded-full bg-signal motion-safe:animate-pulse" /> Transmission · KAB-0001
-      </p>
-      <motion.div
-        className="absolute inset-0 overflow-hidden rounded-xl border border-cyan/25 bg-deep shadow-[0_0_70px_rgba(103,232,249,0.14)]"
-        style={{ opacity: scrollFade }}
-      >
-        <motion.img
-          src="/karl-full.webp"
-          alt="Karl Adrian Bensi standing on a forest trail"
-          width={416}
-          height={952}
-          className="h-full w-full"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: assembled ? 1 : 0 }}
-          transition={{ duration: 1.1, ease: "easeOut" }}
-        />
-        {/* Transmission texture: scanlines and a slow sweep, never covering the picture's content */}
-        <div aria-hidden className="pointer-events-none absolute inset-0 bg-[repeating-linear-gradient(0deg,rgb(255_255_255/0.05)_0px,rgb(255_255_255/0.05)_1px,transparent_1px,transparent_4px)]" />
-        <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-transparent via-cyan/12 to-transparent motion-safe:animate-[scan_5.5s_linear_infinite]" />
-      </motion.div>
-      {/* HUD corners */}
-      <span aria-hidden className="absolute -top-1.5 -left-1.5 size-5 border-t-2 border-l-2 border-cyan/70" />
-      <span aria-hidden className="absolute -top-1.5 -right-1.5 size-5 border-t-2 border-r-2 border-cyan/70" />
-      <span aria-hidden className="absolute -bottom-1.5 -left-1.5 size-5 border-b-2 border-l-2 border-cyan/70" />
-      <span aria-hidden className="absolute -right-1.5 -bottom-1.5 size-5 border-r-2 border-b-2 border-cyan/70" />
-    </motion.div>
-  )
-}
-
 export function Hero({ stage, skipped, onSkip }: { stage: number; skipped: boolean; onSkip: () => void }) {
   const ref = useRef<HTMLElement>(null)
-  const frameRef = useRef<HTMLDivElement>(null)
   const reduce = useReducedMotion()
   const { scrollYProgress } = useScroll({ target: ref, offset: ["start start", "end start"] })
   const y = useTransform(scrollYProgress, [0, 1], [0, -140])
   const opacity = useTransform(scrollYProgress, [0, 0.75], [1, 0])
-  // The photo dissolves into stars over the first stretch of scroll (the particles take over)
-  const photoFade = useTransform(scrollYProgress, [0, 0.18], [1, 0])
   const online = stage >= STAGE.done
   const settled = stage >= STAGE.settle
   const text = useScramble(NAME, WORD, stage >= STAGE.decrypt, 950)
   const shown = settled ? WORD : text
   const [blip, setBlip] = useState(false)
-  const [assembled, setAssembled] = useState(false)
-
-  // Skipping the intro shows the photo straight away
-  useEffect(() => {
-    if (skipped) setAssembled(true)
-  }, [skipped])
 
   // An occasional signal glitch on the title once the hero is live
   useEffect(() => {
@@ -275,14 +216,7 @@ export function Hero({ stage, skipped, onSkip }: { stage: number; skipped: boole
         aria-hidden
         className="pointer-events-none absolute inset-x-0 bottom-0 z-[4] h-1/3 bg-gradient-to-t from-void via-void/60 to-transparent"
       />
-      <PhotoFrame frameRef={frameRef} settled={settled} assembled={assembled} scrollFade={photoFade} />
-      <ParticlePortrait
-        src="/karl-full.webp"
-        active={settled}
-        instant={skipped}
-        frameRef={frameRef}
-        onAssembled={() => setAssembled(true)}
-      />
+      <ParticlePortrait src="/karl-face.webp" active={settled} instant={skipped} />
 
       <motion.div
         style={{ y, opacity }}
@@ -366,8 +300,8 @@ export function Hero({ stage, skipped, onSkip }: { stage: number; skipped: boole
         <span>
           Crew ID <span className="text-ink">KAB-0001</span>
         </span>
-        <span className="flex items-center gap-2 lg:hidden">
-          <span className="size-1.5 rounded-full bg-signal motion-safe:animate-pulse" /> Uplink secure
+        <span className="flex items-center gap-2">
+          <span className="size-1.5 rounded-full bg-signal" /> Uplink secure
         </span>
       </motion.div>
     </section>

@@ -151,7 +151,7 @@ export function Skills() {
   return (
     <section id="skills" className="relative scroll-mt-16 py-24 sm:py-32">
       <div className="gutter">
-        <SectionHeading index="02" label="Systems check" title="Skills" />
+        <SectionHeading title="Skills" note={`${all.length} tools I've shipped with, across ${skillGroups.length} areas: frontend, backend and data, mobile and desktop, and automation.`} />
         <motion.div {...reveal}>
           <OrbitSystem active={active} />
           <p className="label mt-2 text-center">Move across the system to steer the orbits</p>

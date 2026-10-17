@@ -54,13 +54,13 @@ function StatusBadge({ status }: { status: Project["status"] }) {
   if (status === "live")
     return (
       <span className="label flex items-center gap-2 text-signal">
-        <span className="size-1.5 rounded-full bg-signal motion-safe:animate-pulse" /> Live
+        <span className="size-1.5 rounded-full bg-signal" /> Live
       </span>
     )
   if (status === "wip")
     return (
       <span className="label flex items-center gap-2 rounded-full border border-amber-300/40 bg-amber-300/10 px-2.5 py-1 text-amber-200">
-        <span className="size-1.5 rounded-full bg-amber-300 motion-safe:animate-pulse" /> In development
+        <span className="size-1.5 rounded-full bg-amber-300" /> In development
       </span>
     )
   return null
@@ -366,14 +366,20 @@ function ProjectList() {
 export function Projects() {
   const reduce = useReducedMotion()
   const desktop = useDesktop()
+  const voyage = desktop && !reduce
+  const live = projects.filter((p) => p.status === "live").length
+  const wip = projects.filter((p) => p.status === "wip").length
 
   return (
     <section id="projects" className="relative scroll-mt-16 pt-24 sm:pt-32">
       <div className="gutter">
-        <SectionHeading index="03" label="Mission log" title="Projects" />
+        <SectionHeading
+          title="Projects"
+          note={`${projects.length} projects, ${live} live and ${wip} in development.${voyage ? " Scroll to travel between them." : ""}`}
+        />
       </div>
 
-      {desktop && !reduce ? <Voyage /> : <ProjectList />}
+      {voyage ? <Voyage /> : <ProjectList />}
 
       <div className="gutter pt-8 pb-24 sm:pb-32">
         <motion.aside

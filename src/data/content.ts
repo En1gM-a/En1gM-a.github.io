@@ -14,7 +14,7 @@ export const profile = {
     "I build **full-stack applications** for the web, mobile and desktop, from a real-time city information platform and AI-assisted tools to Android apps and Windows systems. I enjoy working through difficult problems and turning them into clear, maintainable solutions.",
     "I'm currently **open to internships, freelance projects and full-time roles**, and I'm always happy to talk about new ideas.",
   ],
-  footnote: "Outside of code, I'm a lifelong space enthusiast — hence the theme.",
+  footnote: "Outside of code, I'm a lifelong space enthusiast",
 }
 
 import type { PreviewKind } from "../components/previews"

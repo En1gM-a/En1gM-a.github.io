@@ -78,17 +78,6 @@ body {
   .hero-word {
     font-size: clamp(44px, 13.4vw, 220px);
   }
-  /* On desktop the full-height photo stands to the right, so the title shares the row */
-  @media (min-width: 1024px) {
-    .hero-word {
-      font-size: min(9.6vw, 190px);
-    }
-  }
-  @media (min-width: 1280px) {
-    .hero-word {
-      font-size: min(10.2vw, 190px);
-    }
-  }
 
   .silver {
     background: linear-gradient(180deg, #ffffff 0%, #e4e7ef 38%, #9097aa 78%, #5d6376 100%);
@@ -208,6 +197,14 @@ body {
   }
   .skip-link:focus {
     transform: none;
+  }
+}
+
+@media (forced-colors: active) {
+  .silver {
+    background: none;
+    color: CanvasText;
+    -webkit-text-fill-color: CanvasText;
   }
 }
 

@@ -115,7 +115,7 @@ function CrewCard() {
               <div className="relative aspect-[416/952] h-full shrink-0 overflow-hidden rounded-lg border border-line">
                 <img
                   src="/karl-full.webp"
-                  alt="Karl Adrian Bensi"
+                  alt="Karl Adrian Bensi on a forest trail"
                   width={416}
                   height={952}
                   loading="lazy"
@@ -141,7 +141,7 @@ function CrewCard() {
                 <div className="space-y-2">
                   <Barcode />
                   <p className="label flex items-center gap-1.5 text-signal">
-                    <span className="size-1.5 rounded-full bg-signal motion-safe:animate-pulse" /> Cleared
+                    <span className="size-1.5 rounded-full bg-signal" /> Cleared
                   </p>
                 </div>
               </div>
@@ -156,13 +156,13 @@ function CrewCard() {
             <div className="grid w-full grid-cols-3 gap-3 border-t border-line pt-5">
               {stats.map((s) => (
                 <div key={s.label}>
-                  <Counter to={Number(s.value)} className="display silver block text-4xl" />
+                  <Counter to={Number(s.value)} className="display block text-4xl text-ink" />
                   <p className="mt-1.5 text-xs leading-snug text-faint">{s.label}</p>
                 </div>
               ))}
             </div>
             <p className="label flex items-center gap-2 self-start text-signal">
-              <span className="size-1.5 motion-safe:animate-pulse rounded-full bg-signal" /> Open to opportunities
+              <span className="size-1.5 rounded-full bg-signal" /> Open to opportunities
             </p>
           </div>
         </motion.div>
@@ -183,7 +183,7 @@ function CrewCard() {
 export function About() {
   return (
     <section id="about" className="gutter relative scroll-mt-16 py-24 sm:py-32">
-      <SectionHeading index="01" label="About me" title="About" />
+      <SectionHeading title="About" note="BS Computer Engineering student and full-stack developer, open to internships, freelance and full-time roles." />
 
       <Statement />
 
