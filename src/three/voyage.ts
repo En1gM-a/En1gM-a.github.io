@@ -253,7 +253,7 @@ export function createVoyage(
   const camera = new THREE.PerspectiveCamera(48, 1, 0.1, 900)
   const n = palettes.length
   const glow = glowTexture()
-  const planets: { mesh: THREE.Mesh; spin: number; radius: number; light: THREE.Vector3; phase: number }[] = []
+  const planets: { mesh: THREE.Mesh; spin: number; light: THREE.Vector3 }[] = []
   const materials: THREE.ShaderMaterial[] = []
   const galaxies: THREE.Points[] = []
 
@@ -285,7 +285,7 @@ export function createVoyage(
     mesh.position.copy(center)
     mesh.rotation.z = (side * 0.35) / (1 + (i % 2))
     scene.add(mesh)
-    planets.push({ mesh, spin: 0.04 + (i % 3) * 0.015, radius, light, phase: i * 1.7 })
+    planets.push({ mesh, spin: 0.04 + (i % 3) * 0.015, light })
 
     // Atmospheric halo behind the disc
     const halo = new THREE.Sprite(
@@ -352,15 +352,17 @@ export function createVoyage(
   const streaks = new THREE.LineSegments(streakGeo, streakMat)
   scene.add(streaks)
 
-  // A crew member in NASA's suit, orbiting whichever planet we're parked at
+  // A crew member in NASA's suit rides with the camera, so he is always in view: he floats in the open
+  // corner above each planet (beside it on phones), clear of the project details
   const env = spaceEnvironment(renderer)
   scene.environment = env
   const astro = createAstronaut({ tether: false })
-  astro.root.scale.setScalar(tall ? 0.85 : 1)
-  scene.add(astro.root)
+  scene.add(camera)
+  camera.add(astro.root)
   const sun = new THREE.DirectionalLight(0xfff3e6, 2.6)
   scene.add(sun, sun.target, new THREE.HemisphereLight(0x6fa8c8, 0x3a2414, 0.6))
-  const orbit = new THREE.Vector3()
+  const astroWorld = new THREE.Vector3()
+  const sideOf = (i: number) => (i % 2 === 0 ? 1 : -1)
 
   // Camera stations: parked up the route from each planet, looking straight ahead,
   // so the planet sits large at the screen edge on its own side
@@ -434,16 +436,23 @@ export function createVoyage(
 
     for (const pl of planets) pl.mesh.rotation.y += dt * pl.spin
 
-    // He moves to the next planet mid-warp, while the camera is between them
-    const at = planets[Math.max(0, Math.min(n - 1, Math.round(p)))]
-    const R = at.radius * 1.55
-    const a = time * 0.3 + at.phase
-    orbit.set(Math.cos(a) * R, Math.sin(a) * R * 0.28, Math.sin(a) * R * 0.96)
-    astro.root.position.copy(at.mesh.position).add(orbit)
-    astro.root.rotation.set(Math.sin(time * 0.4) * 0.35, Math.sin(time * 0.2) * 0.8, Math.sin(time * 0.27) * 0.25 + 0.3)
+    // He crosses to the next planet's side mid-warp, while the project details are hidden,
+    // and slides in from the edge as the voyage arrives
+    const cross = f * f * (3 - 2 * f)
+    const sx = sideOf(i0) + (sideOf(i1) - sideOf(i0)) * cross
+    const ad = tall ? 17 : 15
+    const hh = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * ad
+    const hw = hh * camera.aspect
+    const ax = tall ? -sx * 0.5 : sx * 0.8
+    const out = (1 - entry) * 0.9 * (ax < 0 ? -1 : 1)
+    astro.root.position.set((ax + out + Math.sin(time * 0.3) * 0.04) * hw, ((tall ? 0.47 : 0.45) + Math.sin(time * 0.41) * 0.04) * hh, -ad)
+    // Turned toward the middle of the screen from whichever side he's on
+    astro.root.rotation.set(Math.sin(time * 0.35) * 0.1, 0.5 - (ax / (tall ? 0.5 : 0.8)) * 0.5, Math.sin(time * 0.27) * 0.08)
     astro.update(time, dt, { x: 0, y: 0 })
-    sun.target.position.copy(at.mesh.position)
-    sun.position.copy(at.mesh.position).addScaledVector(at.light, 60)
+    const at = planets[Math.max(0, Math.min(n - 1, Math.round(p)))]
+    astro.root.getWorldPosition(astroWorld)
+    sun.target.position.copy(astroWorld)
+    sun.position.copy(astroWorld).addScaledVector(at.light, 60)
     for (const m of materials) m.uniforms.uTime.value = time
     for (const g of galaxies) g.rotation.y += dt * 0.03
 

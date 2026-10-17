@@ -21,15 +21,15 @@ type Opts = { mobile: boolean; reduce: boolean; invalidate?: () => void }
 // Astronaut placement per section: [x, y] as fractions of the half-viewport, depth in scene units
 type Anchor = [number, number, number]
 const WIDE: Anchor[] = [
-  [0.84, 0.3, 13], // hero: right of the portrait
-  [0.7, 0.3, 9.5], // about: the open right side
-  [0.74, 0.45, 11], // skills: above the orbits
-  [0.74, 0.3, 11], // projects (the voyage covers the backdrop)
-  [0.66, 0.45, 9.5], // contact: beside the heading
+  [0.84, 0.3, 16], // hero: right of the portrait
+  [0.72, 0.3, 12], // about: the open right side
+  [0.76, 0.45, 13.5], // skills: above the orbits
+  [1.6, 0.3, 13.5], // projects: floats off before the voyage, which has its own astronaut
+  [0.68, 0.45, 12], // contact: beside the heading
 ]
 // On phones the text fills the width, so the astronaut keeps to the hero, then floats off to the right
 const TALL: Anchor[] = [
-  [0.6, 0.76, 19],
+  [0.6, 0.76, 22],
   [1.5, 0.6, 15],
   [1.5, 0.66, 15],
   [1.5, 0.6, 15],
