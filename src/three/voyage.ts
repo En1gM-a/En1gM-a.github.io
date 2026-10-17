@@ -1,4 +1,6 @@
 import * as THREE from "three"
+import { createAstronaut } from "./astronaut"
+import { spaceEnvironment } from "./env"
 
 export type Palette = {
   /** Deep base, mid tone, band highlight, atmosphere glow */
@@ -245,12 +247,13 @@ export function createVoyage(
   const dpr = Math.min(window.devicePixelRatio || 1, mobile ? 1.25 : 1.75)
   renderer.setPixelRatio(dpr)
   renderer.setClearColor(0x000000, 0)
+  renderer.toneMapping = THREE.ACESFilmicToneMapping
 
   const scene = new THREE.Scene()
   const camera = new THREE.PerspectiveCamera(48, 1, 0.1, 900)
   const n = palettes.length
   const glow = glowTexture()
-  const planets: { mesh: THREE.Mesh; spin: number }[] = []
+  const planets: { mesh: THREE.Mesh; spin: number; radius: number; light: THREE.Vector3; phase: number }[] = []
   const materials: THREE.ShaderMaterial[] = []
   const galaxies: THREE.Points[] = []
 
@@ -260,6 +263,7 @@ export function createVoyage(
     const radius = 9.5 + (i % 3) * 0.9
     const center = tall ? new THREE.Vector3(side * 3.5, 7, z) : new THREE.Vector3(side * SIDE_X, i % 2 ? 1.5 : -1.2, z)
 
+    const light = new THREE.Vector3(-side * 0.65, 0.42, 0.62).normalize()
     const mat = new THREE.ShaderMaterial({
       vertexShader: planetVertex,
       fragmentShader: planetFragment,
@@ -270,7 +274,7 @@ export function createVoyage(
         uC: { value: new THREE.Color(pal.c) },
         uAtmo: { value: new THREE.Color(pal.atmo) },
         // Lit from the route's side, so the bright limb faces the content
-        uLight: { value: new THREE.Vector3(-side * 0.65, 0.42, 0.62).normalize() },
+        uLight: { value: light },
         uTime: { value: 0 },
         uSeed: { value: i * 7.31 },
         uBands: { value: 6 + (i % 3) * 4 },
@@ -281,11 +285,11 @@ export function createVoyage(
     mesh.position.copy(center)
     mesh.rotation.z = (side * 0.35) / (1 + (i % 2))
     scene.add(mesh)
-    planets.push({ mesh, spin: 0.04 + (i % 3) * 0.015 })
+    planets.push({ mesh, spin: 0.04 + (i % 3) * 0.015, radius, light, phase: i * 1.7 })
 
     // Atmospheric halo behind the disc
     const halo = new THREE.Sprite(
-      new THREE.SpriteMaterial({ map: glow, color: new THREE.Color(pal.atmo), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity: 0.7 }),
+      new THREE.SpriteMaterial({ map: glow, color: new THREE.Color(pal.atmo), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity: 0.7, toneMapped: false }),
     )
     halo.position.copy(center)
     halo.scale.setScalar(radius * 3)
@@ -322,7 +326,7 @@ export function createVoyage(
     galaxies.push(g)
 
     const neb = new THREE.Sprite(
-      new THREE.SpriteMaterial({ map: cloudTexture(new THREE.Color(pal.b)), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity: 0.55 }),
+      new THREE.SpriteMaterial({ map: cloudTexture(new THREE.Color(pal.b)), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity: 0.55, toneMapped: false }),
     )
     neb.position.set(-side * 12, 4, z - 60)
     neb.scale.setScalar(110)
@@ -344,9 +348,19 @@ export function createVoyage(
   }
   const streakGeo = new THREE.BufferGeometry()
   streakGeo.setAttribute("position", new THREE.BufferAttribute(linePos, 3))
-  const streakMat = new THREE.LineBasicMaterial({ color: 0xd8f3ff, transparent: true, opacity: 0.5, depthWrite: false, blending: THREE.AdditiveBlending })
+  const streakMat = new THREE.LineBasicMaterial({ color: 0xd8f3ff, transparent: true, opacity: 0.5, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false })
   const streaks = new THREE.LineSegments(streakGeo, streakMat)
   scene.add(streaks)
+
+  // A crew member in NASA's suit, orbiting whichever planet we're parked at
+  const env = spaceEnvironment(renderer)
+  scene.environment = env
+  const astro = createAstronaut({ tether: false })
+  astro.root.scale.setScalar(tall ? 0.85 : 1)
+  scene.add(astro.root)
+  const sun = new THREE.DirectionalLight(0xfff3e6, 2.6)
+  scene.add(sun, sun.target, new THREE.HemisphereLight(0x6fa8c8, 0x3a2414, 0.6))
+  const orbit = new THREE.Vector3()
 
   // Camera stations: parked up the route from each planet, looking straight ahead,
   // so the planet sits large at the screen edge on its own side
@@ -419,6 +433,17 @@ export function createVoyage(
     camera.updateProjectionMatrix()
 
     for (const pl of planets) pl.mesh.rotation.y += dt * pl.spin
+
+    // He moves to the next planet mid-warp, while the camera is between them
+    const at = planets[Math.max(0, Math.min(n - 1, Math.round(p)))]
+    const R = at.radius * 1.55
+    const a = time * 0.3 + at.phase
+    orbit.set(Math.cos(a) * R, Math.sin(a) * R * 0.28, Math.sin(a) * R * 0.96)
+    astro.root.position.copy(at.mesh.position).add(orbit)
+    astro.root.rotation.set(Math.sin(time * 0.4) * 0.35, Math.sin(time * 0.2) * 0.8, Math.sin(time * 0.27) * 0.25 + 0.3)
+    astro.update(time, dt, { x: 0, y: 0 })
+    sun.target.position.copy(at.mesh.position)
+    sun.position.copy(at.mesh.position).addScaledVector(at.light, 60)
     for (const m of materials) m.uniforms.uTime.value = time
     for (const g of galaxies) g.rotation.y += dt * 0.03
 
@@ -488,6 +513,7 @@ export function createVoyage(
         else mat?.dispose()
       })
       glow.dispose()
+      env.dispose()
       renderer.dispose()
     },
   }

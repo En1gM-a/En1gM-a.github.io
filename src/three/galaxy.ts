@@ -188,6 +188,9 @@ export function createGalaxy(canvas: HTMLCanvasElement, { reduce, mobile }: Opti
   }
   renderer.setPixelRatio(dpr)
   renderer.setClearColor(0x000000, 0)
+  // Filmic response and soft shadows for the lit props; the shader-drawn galaxy is unaffected
+  renderer.toneMapping = THREE.ACESFilmicToneMapping
+  renderer.shadowMap.enabled = !mobile
 
   const scene = new THREE.Scene()
   const camera = new THREE.PerspectiveCamera(55, 1, 0.1, 200)
@@ -226,6 +229,7 @@ export function createGalaxy(canvas: HTMLCanvasElement, { reduce, mobile }: Opti
     blending: THREE.AdditiveBlending,
     depthWrite: false,
     transparent: true,
+    toneMapped: false,
   })
   const core = new THREE.Sprite(coreMat)
   core.scale.set(3.4, 3.4, 1)
@@ -248,6 +252,7 @@ export function createGalaxy(canvas: HTMLCanvasElement, { reduce, mobile }: Opti
         depthWrite: false,
         transparent: true,
         opacity: 0.55,
+        toneMapped: false,
         rotation: Math.random() * Math.PI,
       }),
     )
@@ -266,6 +271,7 @@ export function createGalaxy(canvas: HTMLCanvasElement, { reduce, mobile }: Opti
   gridMat.transparent = true
   gridMat.opacity = 0.07
   gridMat.depthWrite = false
+  gridMat.toneMapped = false
   grid.position.y = -0.9
   scene.add(grid)
 
@@ -276,13 +282,15 @@ export function createGalaxy(canvas: HTMLCanvasElement, { reduce, mobile }: Opti
     side: THREE.DoubleSide,
     depthWrite: false,
     blending: THREE.AdditiveBlending,
+    toneMapped: false,
   })
   const pulse = new THREE.Mesh(new THREE.RingGeometry(0.98, 1, 128), pulseMat)
   pulse.rotation.x = -Math.PI / 2
   pulse.position.y = -0.88
   scene.add(pulse)
 
-  const props = createProps(renderer, camera, { mobile, reduce })
+  // A static (reduced-motion) page redraws when the suit lands
+  const props = createProps(renderer, scene, camera, { mobile, reduce, invalidate: () => reduce && render(performance.now()) })
 
   // State
   const pointer = { x: 0, y: 0, tx: 0, ty: 0 }

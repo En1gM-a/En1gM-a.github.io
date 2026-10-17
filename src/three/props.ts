@@ -1,11 +1,14 @@
 import * as THREE from "three"
 import { createAstronaut } from "./astronaut"
+import { spaceEnvironment } from "./env"
+import { galaxyBus } from "./bus"
 
 /**
- * Life in the backdrop, drawn into the galaxy's scene: a drifting astronaut on a
- * data tether, gas clouds, tumbling asteroids, a satellite, shooting stars and
+ * Life in the backdrop, drawn into the galaxy's scene: an astronaut in NASA's
+ * EVA suit you can grab and throw, Hubble-palette gas clouds, stars with
+ * diffraction spikes, tumbling asteroids, a satellite, shooting stars and
  * near-field dust. Everything rides in a rig attached to the camera, so each
- * piece keeps to the empty side of the layout while the galaxy turns behind it.
+ * piece keeps to the open side of the layout while the galaxy turns behind it.
  */
 export type Props = {
   /** arrive: 0..1 eased fly-in of the camera; the props come in with it */
@@ -13,12 +16,12 @@ export type Props = {
   dispose: () => void
 }
 
-type Opts = { mobile: boolean; reduce: boolean }
+type Opts = { mobile: boolean; reduce: boolean; invalidate?: () => void }
 
 // Astronaut placement per section: [x, y] as fractions of the half-viewport, depth in scene units
 type Anchor = [number, number, number]
 const WIDE: Anchor[] = [
-  [0.84, 0.3, 15], // hero: right of the portrait
+  [0.84, 0.3, 13], // hero: right of the portrait
   [0.7, 0.3, 9.5], // about: the open right side
   [0.74, 0.45, 11], // skills: above the orbits
   [0.74, 0.3, 11], // projects (the voyage covers the backdrop)
@@ -33,8 +36,9 @@ const TALL: Anchor[] = [
   [1.5, 0.6, 15],
 ]
 const SECTIONS = ["about", "skills", "projects", "contact"]
+const INTERACTIVE = "a,button,input,textarea,select,label,[role='button']"
 
-const cloudVertex = /* glsl */ `
+const quadVertex = /* glsl */ `
   varying vec2 vUv;
   void main() {
     vUv = uv;
@@ -42,11 +46,12 @@ const cloudVertex = /* glsl */ `
   }
 `
 
-// Domain-warped fbm, baked once per cloud into a texture
+// Hubble-palette gas, baked once per cloud: teal glow, warm dust with dark lanes, bright ionisation rims
 const bakeFragment = /* glsl */ `
-  uniform vec3 uA;
-  uniform vec3 uB;
-  uniform vec3 uC;
+  uniform vec3 uGas;
+  uniform vec3 uDust;
+  uniform vec3 uDeep;
+  uniform vec3 uRim;
   uniform float uSeed;
   varying vec2 vUv;
   float hash(vec2 p) { p = fract(p * vec2(123.34, 456.21)); p += dot(p, p + 45.32); return fract(p.x * p.y); }
@@ -62,17 +67,21 @@ const bakeFragment = /* glsl */ `
   }
   void main() {
     vec2 p = (vUv - 0.5) * 2.0;
-    vec2 q = p * 1.7 + uSeed;
+    vec2 q = p * 1.6 + uSeed;
     vec2 w = vec2(fbm(q), fbm(q + vec2(5.2, 1.3)));
     vec2 w2 = vec2(fbm(q + 3.0 * w + vec2(1.7, 9.2)), fbm(q + 3.0 * w + vec2(8.3, 2.8)));
-    float n = fbm(q + 3.5 * w2);
-    float edge = smoothstep(1.0, 0.2, length(p * vec2(1.0, 1.15)) + (w.x - 0.5) * 0.5);
-    float dens = pow(clamp(n * 1.35 - 0.3, 0.0, 1.0), 1.5) * edge;
-    float dust = smoothstep(0.52, 0.72, fbm(q * 2.3 + w * 2.0 + 11.0));
-    vec3 col = mix(uA, uB, clamp(length(w2) * 0.9, 0.0, 1.0));
-    col = mix(col, uC, clamp(pow(n, 3.0) * 2.2, 0.0, 1.0));
-    col *= dens * (1.0 - dust * 0.75);
-    gl_FragColor = vec4(col, 1.0);
+    float n = fbm(q + 3.2 * w2);
+    float edge = smoothstep(1.0, 0.2, length(p * vec2(1.0, 1.1)) + (w.x - 0.5) * 0.6);
+    float gas = smoothstep(0.25, 0.85, fbm(q * 0.7 + w * 1.5 + 4.0));
+    float dust = smoothstep(0.45, 0.78, n);
+    float lit = fbm(q + 3.2 * w2 + vec2(0.03, -0.03));
+    float rim = clamp((n - lit) * 16.0, 0.0, 1.0) * dust;
+    float lanes = smoothstep(0.55, 0.75, fbm(q * 2.4 + w * 2.0 + 11.0));
+    vec3 col = uGas * gas * 0.85 + uGas * pow(gas, 3.0) * 0.45;
+    col = mix(col, mix(uDeep, uDust, n), dust * 0.85);
+    col *= 1.0 - lanes * 0.7;
+    col += uRim * rim * 1.3;
+    gl_FragColor = vec4(col * edge, 1.0);
   }
 `
 
@@ -90,6 +99,45 @@ const cloudFragment = /* glsl */ `
     vec3 col = mix(c1, c2, 0.3 + 0.2 * sin(uTime * 0.05));
     col *= smoothstep(0.5, 0.3, length(vUv - 0.5));
     gl_FragColor = vec4(col, uOpacity);
+  }
+`
+
+// Bright stars with Hubble-style diffraction spikes
+const spikeVertex = /* glsl */ `
+  uniform float uTime;
+  uniform float uScroll;
+  uniform float uViewH;
+  uniform float uTan;
+  uniform float uAspect;
+  uniform float uPx;
+  uniform float uFade;
+  attribute vec3 aBase;
+  attribute vec3 aColor;
+  varying vec3 vColor;
+  varying float vAlpha;
+  void main() {
+    float d = 60.0;
+    float halfH = uTan * d;
+    float fy = fract(aBase.y + uScroll * 0.1 / uViewH);
+    vec3 p = vec3(aBase.x * halfH * uAspect, (fy * 2.0 - 1.0) * halfH * 1.05, -d);
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.0);
+    gl_PointSize = uPx * aBase.z;
+    vColor = aColor;
+    vAlpha = uFade * (0.8 + 0.2 * sin(uTime * (0.8 + aBase.z) + aBase.x * 40.0));
+  }
+`
+
+const spikeFragment = /* glsl */ `
+  varying vec3 vColor;
+  varying float vAlpha;
+  void main() {
+    vec2 p = gl_PointCoord - 0.5;
+    float r = length(p);
+    float core = exp(-r * r * 220.0);
+    float halo = exp(-r * r * 28.0) * 0.22;
+    float spikes = (exp(-abs(p.x) * 70.0) * exp(-abs(p.y) * 5.5) + exp(-abs(p.y) * 70.0) * exp(-abs(p.x) * 5.5)) * 0.75;
+    float a = (core + halo + spikes) * smoothstep(0.5, 0.32, r);
+    gl_FragColor = vec4(mix(vColor, vec3(1.0), core * 0.8), a * vAlpha);
   }
 `
 
@@ -138,64 +186,31 @@ const streakFragment = /* glsl */ `
 `
 
 const rgb = (hex: number) => new THREE.Vector3(((hex >> 16) & 255) / 255, ((hex >> 8) & 255) / 255, (hex & 255) / 255)
+const smooth = (k: number) => k * k * (3 - 2 * k)
+const wrap = (a: number) => Math.atan2(Math.sin(a), Math.cos(a))
 
-/** Dim space with a violet galaxy band and a few coloured glows, for the visor and metal to reflect */
-function spaceEnvironment(renderer: THREE.WebGLRenderer) {
-  const c = document.createElement("canvas")
-  c.width = 512
-  c.height = 256
-  const x = c.getContext("2d")!
-  const g = x.createLinearGradient(0, 0, 0, 256)
-  g.addColorStop(0, "#0b0f2a")
-  g.addColorStop(0.5, "#1a1240")
-  g.addColorStop(1, "#05060f")
-  x.fillStyle = g
-  x.fillRect(0, 0, 512, 256)
-  const band = x.createLinearGradient(0, 96, 0, 160)
-  band.addColorStop(0, "rgba(167,139,250,0)")
-  band.addColorStop(0.5, "rgba(196,160,255,0.55)")
-  band.addColorStop(1, "rgba(167,139,250,0)")
-  x.fillStyle = band
-  x.fillRect(0, 96, 512, 64)
-  const blob = (cx: number, cy: number, r: number, col: string) => {
-    const h = x.createRadialGradient(cx, cy, 0, cx, cy, r)
-    h.addColorStop(0, col)
-    h.addColorStop(1, "rgba(0,0,0,0)")
-    x.fillStyle = h
-    x.fillRect(cx - r, cy - r, r * 2, r * 2)
-  }
-  blob(150, 70, 70, "rgba(255,225,245,0.95)")
-  blob(380, 120, 90, "rgba(34,211,238,0.6)")
-  blob(260, 180, 80, "rgba(236,72,153,0.45)")
-  for (let i = 0; i < 260; i++) {
-    x.fillStyle = `rgba(255,255,255,${Math.random() * 0.8})`
-    x.fillRect(Math.random() * 512, Math.random() * 256, 1, 1)
-  }
-  const tex = new THREE.CanvasTexture(c)
-  tex.mapping = THREE.EquirectangularReflectionMapping
-  tex.colorSpace = THREE.SRGBColorSpace
-  const pmrem = new THREE.PMREMGenerator(renderer)
-  const env = pmrem.fromEquirectangular(tex).texture
-  tex.dispose()
-  pmrem.dispose()
-  return env
-}
-
-function bakeClouds(renderer: THREE.WebGLRenderer, palettes: [number, number, number][]) {
+function bakeClouds(renderer: THREE.WebGLRenderer, palettes: [number, number, number, number][], size: number) {
   const scene = new THREE.Scene()
   const cam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1)
   const mat = new THREE.ShaderMaterial({
-    vertexShader: cloudVertex,
+    vertexShader: quadVertex,
     fragmentShader: bakeFragment,
-    uniforms: { uA: { value: new THREE.Vector3() }, uB: { value: new THREE.Vector3() }, uC: { value: new THREE.Vector3() }, uSeed: { value: 0 } },
+    uniforms: {
+      uGas: { value: new THREE.Vector3() },
+      uDust: { value: new THREE.Vector3() },
+      uDeep: { value: new THREE.Vector3() },
+      uRim: { value: new THREE.Vector3() },
+      uSeed: { value: 0 },
+    },
   })
   const quad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), mat)
   scene.add(quad)
-  const targets = palettes.map(([a, b, c], i) => {
-    const rt = new THREE.WebGLRenderTarget(512, 512)
-    mat.uniforms.uA.value.copy(rgb(a))
-    mat.uniforms.uB.value.copy(rgb(b))
-    mat.uniforms.uC.value.copy(rgb(c))
+  const targets = palettes.map(([gas, dust, deep, rim], i) => {
+    const rt = new THREE.WebGLRenderTarget(size, size)
+    mat.uniforms.uGas.value.copy(rgb(gas))
+    mat.uniforms.uDust.value.copy(rgb(dust))
+    mat.uniforms.uDeep.value.copy(rgb(deep))
+    mat.uniforms.uRim.value.copy(rgb(rim))
     mat.uniforms.uSeed.value = 3.7 + i * 11.3
     renderer.setRenderTarget(rt)
     renderer.clear()
@@ -251,11 +266,11 @@ function asteroidGeometry() {
   return geo
 }
 
-function createSatellite(env: THREE.Texture) {
+function createSatellite() {
   const sat = new THREE.Group()
-  const foil = new THREE.MeshStandardMaterial({ color: 0xd2a24c, metalness: 0.9, roughness: 0.32, envMap: env, envMapIntensity: 1.2 })
-  const white = new THREE.MeshStandardMaterial({ color: 0xdfe4ee, roughness: 0.5, metalness: 0.2, envMap: env, envMapIntensity: 0.6 })
-  const panel = new THREE.MeshStandardMaterial({ map: solarPanelTexture(), metalness: 0.6, roughness: 0.28, envMap: env, envMapIntensity: 1.1 })
+  const foil = new THREE.MeshStandardMaterial({ color: 0xd2a24c, metalness: 0.9, roughness: 0.32, envMapIntensity: 1.2 })
+  const white = new THREE.MeshStandardMaterial({ color: 0xdfe4ee, roughness: 0.5, metalness: 0.2, envMapIntensity: 0.6 })
+  const panel = new THREE.MeshStandardMaterial({ map: solarPanelTexture(), metalness: 0.6, roughness: 0.28, envMapIntensity: 1.1 })
   sat.add(new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.6, 0.9), foil))
   for (const side of [-1, 1]) {
     const strut = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 0.5, 6), white)
@@ -266,7 +281,7 @@ function createSatellite(env: THREE.Texture) {
     wing.position.x = side * 1.65
     sat.add(wing)
   }
-  const dishMat = new THREE.MeshStandardMaterial({ color: 0xdfe4ee, roughness: 0.5, metalness: 0.2, envMap: env, envMapIntensity: 0.6, side: THREE.DoubleSide })
+  const dishMat = new THREE.MeshStandardMaterial({ color: 0xdfe4ee, roughness: 0.5, metalness: 0.2, envMapIntensity: 0.6, side: THREE.DoubleSide })
   const dish = new THREE.Mesh(new THREE.SphereGeometry(0.42, 20, 8, 0, Math.PI * 2, 0, Math.PI * 0.3), dishMat)
   dish.rotation.x = -Math.PI / 2
   dish.position.z = 0.82
@@ -275,45 +290,78 @@ function createSatellite(env: THREE.Texture) {
   feed.rotation.x = Math.PI / 2
   feed.position.z = 0.7
   sat.add(feed)
-  const light = new THREE.Mesh(new THREE.SphereGeometry(0.05, 8, 6), new THREE.MeshBasicMaterial({ color: 0xf43f5e }))
+  const light = new THREE.Mesh(new THREE.SphereGeometry(0.05, 8, 6), new THREE.MeshBasicMaterial({ color: 0xf43f5e, toneMapped: false }))
   light.position.set(0, 0.36, -0.3)
   sat.add(light)
   return { sat, light }
 }
 
-export function createProps(renderer: THREE.WebGLRenderer, camera: THREE.PerspectiveCamera, { mobile, reduce }: Opts): Props {
+export function createProps(
+  renderer: THREE.WebGLRenderer,
+  scene: THREE.Scene,
+  camera: THREE.PerspectiveCamera,
+  { mobile, reduce, invalidate }: Opts,
+): Props {
   const env = spaceEnvironment(renderer)
+  scene.environment = env
   const rig = new THREE.Group()
   camera.add(rig)
 
-  // Lights ride with the camera: warm key from the galaxy core's side, cyan rim, violet fill
-  const hemi = new THREE.HemisphereLight(0x9d8cff, 0x0a0f24, 0.9)
-  const key = new THREE.DirectionalLight(0xfff1fa, 2.4)
-  key.position.set(-5, 6, 4)
+  // Lights ride with the camera: a white sun, a teal rim from the gas, warm bounce from the dust
+  const hemi = new THREE.HemisphereLight(0x6fa8c8, 0x3a2414, 0.75)
+  const key = new THREE.DirectionalLight(0xfff3e6, 2.8)
+  const KEY_DIR = new THREE.Vector3(-5, 6, 4).normalize()
   key.target.position.set(0, 0, -10)
-  const rim = new THREE.DirectionalLight(0x67e8f9, 3)
+  key.position.copy(KEY_DIR).multiplyScalar(10).add(key.target.position)
+  const rim = new THREE.DirectionalLight(0x4fd1c5, 2.4)
   rim.position.set(6, 1, -12)
   rim.target.position.set(0, 0, -8)
+  const shadows = !mobile
+  if (shadows) {
+    key.castShadow = true
+    key.shadow.mapSize.set(1024, 1024)
+    const sc = key.shadow.camera
+    sc.left = -1.8
+    sc.right = 1.8
+    sc.top = 1.8
+    sc.bottom = -1.8
+    sc.near = 1
+    sc.far = 25
+    key.shadow.bias = -0.0005
+    key.shadow.normalBias = 0.02
+  }
   camera.add(hemi, key, key.target, rim, rim.target)
 
   // Gas clouds: baked once, then billowing slowly; they slide up the screen at a crawl as the page scrolls
-  const cloudSpecs: { x: number; y: number; size: number; tint: number; alpha: number }[] = [
-    { x: 0.98, y: -0.42, size: 1.05, tint: 0, alpha: 0.62 },
-    { x: -1.05, y: 0.62, size: 0.95, tint: 1, alpha: 0.4 },
-    { x: 0.85, y: 0.95, size: 1.15, tint: 2, alpha: 0.55 },
-    { x: 0.9, y: 1.85, size: 1.15, tint: 0, alpha: 0.6 },
-    { x: -0.9, y: 2.25, size: 1.0, tint: 1, alpha: 0.5 },
-    { x: 0.2, y: 1.35, size: 1.3, tint: 2, alpha: 0.45 },
-  ].slice(0, mobile ? 4 : 6)
-  const baked = bakeClouds(renderer, [
-    [0x6d28d9, 0xdb2777, 0xfde4ff],
-    [0x0e7490, 0x2563eb, 0xa5f3fc],
-    [0xbe185d, 0x6d28d9, 0xfdba74],
-  ])
+  // Kept to the edges and corners, clear of the text columns and the portrait
+  const cloudSpecs: { x: number; y: number; size: number; tint: number; alpha: number }[] = mobile
+    ? [
+        { x: 1.1, y: -0.42, size: 1.0, tint: 0, alpha: 0.6 }, // hero, top-right corner
+        { x: -1.15, y: 0.62, size: 0.9, tint: 1, alpha: 0.45 }, // hero, bottom-left corner
+        { x: 1.05, y: 1.0, size: 1.0, tint: 2, alpha: 0.55 },
+        { x: 1.05, y: 1.85, size: 1.05, tint: 1, alpha: 0.6 },
+      ]
+    : [
+        { x: 1.0, y: -0.28, size: 1.35, tint: 0, alpha: 0.9 }, // hero, top right, behind the astronaut
+        { x: -1.08, y: 0.6, size: 1.05, tint: 1, alpha: 0.6 }, // hero, bottom-left corner
+        { x: 0.92, y: 0.98, size: 1.25, tint: 2, alpha: 0.8 }, // about and skills, right
+        { x: -1.1, y: 0.75, size: 1.0, tint: 0, alpha: 0.45 }, // about, left edge below the text
+        { x: 0.95, y: 1.85, size: 1.35, tint: 1, alpha: 0.85 }, // contact, right
+        { x: -0.98, y: 2.3, size: 1.15, tint: 2, alpha: 0.6 }, // contact, bottom left
+      ]
+  const baked = bakeClouds(
+    renderer,
+    [
+      [0x1f7f8a, 0xe39445, 0x6e3218, 0xffd7a0], // pillars: teal gas, amber and rust dust
+      [0x3157c8, 0xe0609e, 0x5b2a6e, 0xffe2f2], // cluster: blue gas, pink and violet dust
+      [0x22a3b6, 0xf2b24c, 0x5a2b12, 0xfff0c8], // gold: cyan gas, gold dust
+    ],
+    mobile ? 512 : 1024,
+  )
   const CLOUD_DEPTH = 70
   const clouds = cloudSpecs.map((s) => {
     const mat = new THREE.ShaderMaterial({
-      vertexShader: cloudVertex,
+      vertexShader: quadVertex,
       fragmentShader: cloudFragment,
       transparent: true,
       depthWrite: false,
@@ -327,9 +375,47 @@ export function createProps(renderer: THREE.WebGLRenderer, camera: THREE.Perspec
     return { m, mat, ...s }
   })
 
+  // Bright stars with diffraction spikes, mostly toward the edges
+  const SPIKES = mobile ? 28 : 60
+  const spikeBase = new Float32Array(SPIKES * 3)
+  const spikeColor = new Float32Array(SPIKES * 3)
+  const tints = [0xcfe6ff, 0xcfe6ff, 0xffffff, 0xffc58a, 0xff8a6a]
+  for (let i = 0; i < SPIKES; i++) {
+    const edge = Math.random() < 0.7
+    spikeBase[i * 3] = edge ? (Math.random() < 0.5 ? -1 : 1) * (0.55 + Math.random() * 0.45) : Math.random() * 2 - 1
+    spikeBase[i * 3 + 1] = Math.random()
+    spikeBase[i * 3 + 2] = 0.35 + Math.pow(Math.random(), 2.2) * 0.95
+    const c = rgb(tints[Math.floor(Math.random() * tints.length)])
+    spikeColor.set([c.x, c.y, c.z], i * 3)
+  }
+  const spikeGeo = new THREE.BufferGeometry()
+  spikeGeo.setAttribute("position", new THREE.BufferAttribute(new Float32Array(SPIKES * 3), 3))
+  spikeGeo.setAttribute("aBase", new THREE.BufferAttribute(spikeBase, 3))
+  spikeGeo.setAttribute("aColor", new THREE.BufferAttribute(spikeColor, 3))
+  const dpr = renderer.getPixelRatio()
+  const spikeMat = new THREE.ShaderMaterial({
+    vertexShader: spikeVertex,
+    fragmentShader: spikeFragment,
+    transparent: true,
+    depthWrite: false,
+    blending: THREE.AdditiveBlending,
+    uniforms: {
+      uTime: { value: 0 },
+      uScroll: { value: 0 },
+      uViewH: { value: window.innerHeight },
+      uTan: { value: 0.5 },
+      uAspect: { value: 1 },
+      uPx: { value: 34 * dpr },
+      uFade: { value: 0 },
+    },
+  })
+  const spikeStars = new THREE.Points(spikeGeo, spikeMat)
+  spikeStars.frustumCulled = false
+  rig.add(spikeStars)
+
   // Asteroids along the edges, tumbling, with scroll parallax by depth
   const rockGeos = [asteroidGeometry(), asteroidGeometry(), asteroidGeometry()]
-  const rockMat = new THREE.MeshStandardMaterial({ color: 0x3a3641, roughness: 1, metalness: 0.05, flatShading: true, envMap: env, envMapIntensity: 0.2 })
+  const rockMat = new THREE.MeshStandardMaterial({ color: 0x3a3641, roughness: 1, metalness: 0.05, flatShading: true, envMapIntensity: 0.2 })
   const rockSpecs = [
     { x: 0.93, y: 0.15, d: 9, s: 0.3 },
     { x: 0.66, y: 0.55, d: 16, s: 0.42 },
@@ -345,7 +431,7 @@ export function createProps(renderer: THREE.WebGLRenderer, camera: THREE.Perspec
     return { m, ...r, spin: new THREE.Vector3(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5).multiplyScalar(0.5) }
   })
 
-  const { sat, light: satLight } = createSatellite(env)
+  const { sat, light: satLight } = createSatellite()
   rig.add(sat)
 
   // Near-field dust
@@ -362,7 +448,6 @@ export function createProps(renderer: THREE.WebGLRenderer, camera: THREE.Perspec
   dustGeo.setAttribute("position", new THREE.BufferAttribute(new Float32Array(DUST * 3), 3))
   dustGeo.setAttribute("aBase", new THREE.BufferAttribute(base, 3))
   dustGeo.setAttribute("aSeed", new THREE.BufferAttribute(seeds, 1))
-  const dpr = renderer.getPixelRatio()
   const dustMat = new THREE.ShaderMaterial({
     vertexShader: dustVertex,
     fragmentShader: dustFragment,
@@ -386,7 +471,7 @@ export function createProps(renderer: THREE.WebGLRenderer, camera: THREE.Perspec
   // Shooting stars: a small pool, fired every few seconds
   const streaks = Array.from({ length: 2 }, () => {
     const mat = new THREE.ShaderMaterial({
-      vertexShader: cloudVertex,
+      vertexShader: quadVertex,
       fragmentShader: streakFragment,
       transparent: true,
       depthWrite: false,
@@ -400,7 +485,7 @@ export function createProps(renderer: THREE.WebGLRenderer, camera: THREE.Perspec
   })
   let nextStreak = 2.5
 
-  const astro = createAstronaut(env)
+  const astro = createAstronaut({ shadows, onReady: invalidate })
   rig.add(astro.root)
 
   // Section stops: the scroll position at which each anchor applies
@@ -408,38 +493,110 @@ export function createProps(renderer: THREE.WebGLRenderer, camera: THREE.Perspec
   const measure = () => {
     const h = window.innerHeight
     let prev = 0
-    stops = [0, ...SECTIONS.map((id) => {
-      const el = document.getElementById(id)
-      prev = Math.max(prev + 1, el ? el.getBoundingClientRect().top + window.scrollY - h * 0.4 : prev + h)
-      return prev
-    })]
+    stops = [
+      0,
+      ...SECTIONS.map((id) => {
+        const el = document.getElementById(id)
+        prev = Math.max(prev + 1, el ? el.getBoundingClientRect().top + window.scrollY - h * 0.4 : prev + h)
+        return prev
+      }),
+    ]
   }
   measure()
   let remeasure = 0
 
-  // Input: the astronaut watches the cursor, gets nudged by it and twirls when tapped
-  const pointer = { x: -1, y: -1, moved: 0 }
+  // Input. Mouse: grab him, drag, throw. Touch: tap to poke him spinning (dragging would fight the page scroll)
+  const pointer = { x: -1, y: -1 }
   const look = { x: 0, y: 0 }
   const screen = new THREE.Vector3()
-  const astroPx = { x: 0, y: 0, r: 0 }
+  const astroPx = { x: -999, y: -999, r: 0 }
+  const hist: { x: number; y: number; t: number }[] = []
+  let grab: { dx: number; dy: number; t: number; x: number; y: number } | null = null
+  let tap: { t: number; x: number; y: number } | null = null
+  let grabbable = false
+  let unit = 0.01
+  let view = { halfW: 1, halfH: 1 }
+  let cursor = ""
   const off = new THREE.Vector2()
   const vel = new THREE.Vector2()
-  let cooldown = 0
+  let spin = 0
+  let spinVel = 0
+  let pitch = 0
+  let pitchVel = 0
+  const hit = (x: number, y: number) => grabbable && Math.hypot(x - astroPx.x, y - astroPx.y) < astroPx.r
+  const onControl = (t: EventTarget | null) => !!(t as Element | null)?.closest?.(INTERACTIVE)
+  const setCursor = (c: string) => {
+    if (c === cursor) return
+    cursor = c
+    document.documentElement.style.cursor = c
+  }
+  const toView = (x: number, y: number) => ({
+    x: ((x / window.innerWidth) * 2 - 1) * view.halfW,
+    y: -((y / window.innerHeight) * 2 - 1) * view.halfH,
+  })
+
   const onMove = (e: PointerEvent) => {
     pointer.x = e.clientX
     pointer.y = e.clientY
-    pointer.moved = 0.25
+    if (grab) {
+      hist.push({ x: e.clientX, y: e.clientY, t: performance.now() })
+      if (hist.length > 8) hist.shift()
+      return
+    }
+    if (e.pointerType === "mouse") setCursor(hit(e.clientX, e.clientY) && !onControl(e.target) ? "grab" : "")
   }
   const onDown = (e: PointerEvent) => {
-    if ((e.target as Element | null)?.closest?.("a,button,input,textarea,select,label,[role='button']")) return
-    if (Math.hypot(e.clientX - astroPx.x, e.clientY - astroPx.y) < astroPx.r) {
-      astro.twirl()
-      astro.wave()
+    if (!hit(e.clientX, e.clientY) || onControl(e.target)) return
+    if (e.pointerType === "touch") {
+      tap = { t: performance.now(), x: e.clientX, y: e.clientY }
+      return
     }
+    const p = toView(e.clientX, e.clientY)
+    grab = { dx: astro.root.position.x - p.x, dy: astro.root.position.y - p.y, t: performance.now(), x: e.clientX, y: e.clientY }
+    hist.length = 0
+    hist.push({ x: e.clientX, y: e.clientY, t: grab.t })
+    document.body.style.userSelect = "none"
+    setCursor("grabbing")
+  }
+  const onUp = (e: PointerEvent) => {
+    const now = performance.now()
+    if (tap) {
+      if (now - tap.t < 350 && Math.hypot(e.clientX - tap.x, e.clientY - tap.y) < 12) {
+        // A poke: off he spins in a random direction, then the tether reels him in
+        const a = Math.random() * Math.PI * 2
+        vel.x += Math.cos(a) * 160 * unit
+        vel.y += Math.sin(a) * 160 * unit
+        spinVel += (Math.random() < 0.5 ? -1 : 1) * (2 + Math.random() * 2)
+        astro.twirl()
+      }
+      tap = null
+    }
+    if (!grab) return
+    const quick = now - grab.t < 250 && Math.hypot(e.clientX - grab.x, e.clientY - grab.y) < 8
+    if (quick) astro.twirl()
+    else {
+      // Throw: carry the cursor's last ~100 ms of motion
+      const recent = hist.filter((h) => now - h.t < 100)
+      if (recent.length >= 2) {
+        const a = recent[0]
+        const b = recent[recent.length - 1]
+        const s = Math.max(0.016, (b.t - a.t) / 1000)
+        const vx = THREE.MathUtils.clamp((b.x - a.x) / s, -3000, 3000)
+        const vy = THREE.MathUtils.clamp((b.y - a.y) / s, -3000, 3000)
+        vel.set(vx * unit * 0.9, -vy * unit * 0.9)
+        spinVel += -vel.x * 0.18
+        pitchVel += -vel.y * 0.1
+      }
+    }
+    grab = null
+    document.body.style.userSelect = ""
+    setCursor(hit(e.clientX, e.clientY) ? "grab" : "")
   }
   if (!reduce) {
     window.addEventListener("pointermove", onMove, { passive: true })
     window.addEventListener("pointerdown", onDown, { passive: true })
+    window.addEventListener("pointerup", onUp, { passive: true })
+    window.addEventListener("pointercancel", onUp, { passive: true })
   }
   window.addEventListener("resize", measure)
 
@@ -448,7 +605,7 @@ export function createProps(renderer: THREE.WebGLRenderer, camera: THREE.Perspec
   let scrollVel = 0
   const pos = new THREE.Vector3()
   let placed = false
-  const smooth = (k: number) => k * k * (3 - 2 * k)
+  let loadedAt = -1
 
   return {
     update: (dt, arrive) => {
@@ -477,6 +634,7 @@ export function createProps(renderer: THREE.WebGLRenderer, camera: THREE.Perspec
       const d = THREE.MathUtils.lerp(a0[2], a1[2], k)
       const halfH = tan * d
       const halfW = halfH * aspect
+      view = { halfW, halfH }
       // Narrower landscape screens: text runs further right, so keep closer to the edge
       const edge = aspect >= 1 && aspect < 1.45 ? 0.1 : 0
       const target = new THREE.Vector3(
@@ -484,50 +642,66 @@ export function createProps(renderer: THREE.WebGLRenderer, camera: THREE.Perspec
         THREE.MathUtils.lerp(a0[1], a1[1], k) * halfH,
         -d,
       )
-      // Drifts in from off-screen right as the camera arrives
-      target.x += (1 - fade) * halfW * 0.9
+      // Drifts in from off-screen right once the camera has arrived and the suit has streamed in
+      if (astro.loaded() && loadedAt < 0) loadedAt = time
+      const enter = loadedAt < 0 ? 0 : reduce ? 1 : smooth(Math.min(1, (time - loadedAt) / 1.8))
+      target.x += (1 - fade * enter) * halfW * 0.9
       if (!placed || reduce) {
         pos.copy(target)
         placed = true
       } else pos.lerp(target, Math.min(1, dt * 1.6))
 
-      // Springy offset: lags behind fast scrolling, pushed by the cursor
-      const unit = (2 * halfH) / vh
-      cooldown -= dt
-      pointer.moved -= dt
-      if (!reduce && pointer.moved > 0 && cooldown <= 0) {
-        const dx = astroPx.x - pointer.x
-        const dy = astroPx.y - pointer.y
-        const dist = Math.hypot(dx, dy)
-        if (dist < astroPx.r) {
-          const push = (1 - dist / astroPx.r) * 260 * unit
-          vel.x += (dx / (dist || 1)) * push
-          vel.y -= (dy / (dist || 1)) * push
-          cooldown = 0.35
-        }
+      // Physics: held, he follows the cursor; let go, he drifts and tumbles until the tether reels him in
+      unit = (2 * halfH) / vh
+      if (grab) {
+        const p = toView(pointer.x, pointer.y)
+        const gx = p.x + grab.dx - pos.x
+        const gy = p.y + grab.dy - pos.y
+        const f = 1 - Math.exp(-dt * 18)
+        const nx = off.x + (gx - off.x) * f
+        const ny = off.y + (gy - off.y) * f
+        if (dt > 0) vel.set((nx - off.x) / dt, (ny - off.y) / dt)
+        off.set(nx, ny)
+        // Leans into the drag
+        spinVel += ((THREE.MathUtils.clamp(-vel.x * 0.05, -0.7, 0.7) - spin) * 8 - spinVel * 3) * dt
+      } else {
+        const lag = THREE.MathUtils.clamp(scrollVel * 0.12, -120, 120) * unit
+        vel.x += (-off.x * 2 - vel.x * 1.4) * dt
+        vel.y += ((lag - off.y) * 2 - vel.y * 1.4) * dt
+        off.addScaledVector(vel, dt)
+        off.x = THREE.MathUtils.clamp(off.x, -halfW * 1.6, halfW * 1.6)
+        off.y = THREE.MathUtils.clamp(off.y, -halfH * 1.6, halfH * 1.6)
+        spinVel += (-wrap(spin) * 1.6 - spinVel * 1.1) * dt
       }
-      const lag = THREE.MathUtils.clamp(scrollVel * 0.12, -120, 120) * unit
-      vel.x += (-off.x * 5 - vel.x * 2.4) * dt
-      vel.y += ((lag - off.y) * 5 - vel.y * 2.4) * dt
-      off.addScaledVector(vel, dt)
+      spin += spinVel * dt
+      pitchVel += (-wrap(pitch) * 1.6 - pitchVel * 1.1) * dt
+      pitch += pitchVel * dt
 
       astro.root.position.set(
         pos.x + off.x + Math.cos(time * 0.45) * 0.1 * (d / 10),
         pos.y + off.y + Math.sin(time * 0.6) * 0.14 * (d / 10),
         pos.z,
       )
-      astro.root.rotation.z = THREE.MathUtils.clamp(off.x * -0.25, -0.5, 0.5)
+      astro.root.rotation.set(pitch, 0, spin)
 
-      // Where it sits on screen, for the cursor
+      // Where he sits on screen, for grabbing and for the cursor he watches
       screen.copy(astro.root.position).applyMatrix4(camera.projectionMatrix)
       astroPx.x = (screen.x * 0.5 + 0.5) * window.innerWidth
       astroPx.y = (-screen.y * 0.5 + 0.5) * vh
-      astroPx.r = (1.5 / halfH) * vh * 0.5
+      astroPx.r = (1.25 / halfH) * vh * 0.5
+      grabbable = !reduce && astro.loaded() && fade * enter > 0.9 && galaxyBus.dim.get() > 0.5
+      if (!grabbable && !grab && cursor === "grab") setCursor("")
       if (pointer.x >= 0) {
         look.x = THREE.MathUtils.clamp((pointer.x - astroPx.x) / (window.innerWidth * 0.5), -1, 1)
         look.y = THREE.MathUtils.clamp(-(pointer.y - astroPx.y) / (vh * 0.5), -1, 1)
       }
       astro.update(time, dt, look)
+
+      // The sun's shadow camera follows him
+      if (shadows) {
+        key.target.position.copy(astro.root.position)
+        key.position.copy(KEY_DIR).multiplyScalar(10).add(astro.root.position)
+      }
 
       // Clouds
       const cloudHalfH = tan * CLOUD_DEPTH
@@ -561,13 +735,14 @@ export function createProps(renderer: THREE.WebGLRenderer, camera: THREE.Perspec
         satLight.visible = time % 1.4 < 0.12
       }
 
-      // Dust
-      dustMat.uniforms.uTime.value = time
-      dustMat.uniforms.uScroll.value = sy
-      dustMat.uniforms.uViewH.value = vh
-      dustMat.uniforms.uTan.value = tan
-      dustMat.uniforms.uAspect.value = aspect
-      dustMat.uniforms.uFade.value = fade
+      for (const m of [dustMat, spikeMat]) {
+        m.uniforms.uTime.value = time
+        m.uniforms.uScroll.value = sy
+        m.uniforms.uViewH.value = vh
+        m.uniforms.uTan.value = tan
+        m.uniforms.uAspect.value = aspect
+        m.uniforms.uFade.value = fade
+      }
 
       // Shooting stars
       if (!reduce) {
@@ -609,18 +784,22 @@ export function createProps(renderer: THREE.WebGLRenderer, camera: THREE.Perspec
     dispose: () => {
       window.removeEventListener("pointermove", onMove)
       window.removeEventListener("pointerdown", onDown)
+      window.removeEventListener("pointerup", onUp)
+      window.removeEventListener("pointercancel", onUp)
       window.removeEventListener("resize", measure)
+      document.documentElement.style.cursor = ""
+      document.body.style.userSelect = ""
       baked.forEach((rt) => rt.dispose())
+      scene.environment = null
       env.dispose()
-      rockMat.dispose()
       rig.traverse((o) => {
         const m = o as THREE.Mesh
         m.geometry?.dispose()
         const mat = m.material as THREE.Material | THREE.Material[] | undefined
-        if (Array.isArray(mat)) mat.forEach((x) => x.dispose())
-        else mat?.dispose()
-        const map = (mat as THREE.MeshStandardMaterial | undefined)?.map
-        map?.dispose()
+        for (const x of Array.isArray(mat) ? mat : mat ? [mat] : []) {
+          ;(x as THREE.MeshStandardMaterial).map?.dispose()
+          x.dispose()
+        }
       })
       camera.remove(rig, hemi, key, key.target, rim, rim.target)
     },
