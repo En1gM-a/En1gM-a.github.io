@@ -269,3 +269,8 @@ body {
   0%, 18%, 36% { opacity: 0.15; }
   9%, 27%, 46%, 100% { opacity: 1; }
 }
+
+/* Sections focused after a warp jump are landing points, not controls */
+section[tabindex="-1"]:focus {
+  outline: none;
+}

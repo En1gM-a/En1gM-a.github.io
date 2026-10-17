@@ -9,6 +9,7 @@ import { Skills } from "./components/Skills"
 import { Projects } from "./components/Projects"
 import { Contact } from "./components/Contact"
 import { Supernova } from "./components/Supernova"
+import { WarpJump } from "./components/WarpJump"
 import { STAGE, useIntro } from "./hooks/useIntro"
 import { profile } from "./data/content"
 
@@ -75,6 +76,7 @@ export default function App() {
         </a>
       </footer>
       {nova && <Supernova origin={nova} onBlackout={restart} onDone={() => setNova(null)} />}
+      <WarpJump />
     </MotionConfig>
   )
 }

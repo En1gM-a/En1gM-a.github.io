@@ -1,4 +1,5 @@
 import * as THREE from "three"
+import { createProps } from "./props"
 
 export type Galaxy = {
   /** 0..1 — how far the camera has flown in from deep space */
@@ -15,6 +16,7 @@ const galaxyVertex = /* glsl */ `
   uniform float uTime;
   uniform float uSize;
   uniform float uWarp;
+  uniform float uDim;
   attribute float aScale;
   attribute float aSeed;
   varying vec3 vColor;
@@ -31,7 +33,7 @@ const galaxyVertex = /* glsl */ `
     gl_Position = projectionMatrix * view;
     gl_PointSize = uSize * aScale * (1.0 + uWarp * 1.6) / -view.z;
     vColor = color;
-    vTwinkle = 0.65 + 0.35 * sin(uTime * (1.5 + aSeed * 3.0) + aSeed * 40.0);
+    vTwinkle = (0.65 + 0.35 * sin(uTime * (1.5 + aSeed * 3.0) + aSeed * 40.0)) * uDim;
   }
 `
 
@@ -48,13 +50,14 @@ const galaxyFragment = /* glsl */ `
 const starsVertex = /* glsl */ `
   uniform float uTime;
   uniform float uSize;
+  uniform float uDim;
   attribute float aSeed;
   varying float vAlpha;
   void main() {
     vec4 view = modelViewMatrix * vec4(position, 1.0);
     gl_Position = projectionMatrix * view;
     gl_PointSize = uSize * (0.5 + aSeed) * (300.0 / -view.z);
-    vAlpha = 0.45 + 0.55 * sin(uTime * (0.6 + aSeed * 2.0) + aSeed * 90.0);
+    vAlpha = (0.45 + 0.55 * sin(uTime * (0.6 + aSeed * 2.0) + aSeed * 90.0)) * uDim;
   }
 `
 
@@ -175,18 +178,21 @@ const LOOK = [
 ]
 
 export function createGalaxy(canvas: HTMLCanvasElement, { reduce, mobile }: Options): Galaxy | null {
+  const dpr = Math.min(window.devicePixelRatio || 1, mobile ? 1.5 : 1.75)
   let renderer: THREE.WebGLRenderer
   try {
-    renderer = new THREE.WebGLRenderer({ canvas, antialias: false, alpha: true, powerPreference: "high-performance" })
+    // Smooth the astronaut's edges on low-density screens, where it is cheap
+    renderer = new THREE.WebGLRenderer({ canvas, antialias: dpr < 1.5, alpha: true, powerPreference: "high-performance" })
   } catch {
     return null
   }
-  const dpr = Math.min(window.devicePixelRatio || 1, mobile ? 1.5 : 1.75)
   renderer.setPixelRatio(dpr)
   renderer.setClearColor(0x000000, 0)
 
   const scene = new THREE.Scene()
   const camera = new THREE.PerspectiveCamera(55, 1, 0.1, 200)
+  // The props ride on the camera, so it has to be in the scene graph
+  scene.add(camera)
   const path = new THREE.CatmullRomCurve3(PATH, false, "centripetal")
   const lookPath = new THREE.CatmullRomCurve3(LOOK, false, "centripetal")
 
@@ -197,7 +203,7 @@ export function createGalaxy(canvas: HTMLCanvasElement, { reduce, mobile }: Opti
     transparent: true,
     depthWrite: false,
     blending: THREE.AdditiveBlending,
-    uniforms: { uTime: { value: 0 }, uSize: { value: 26 * dpr }, uWarp: { value: 0 } },
+    uniforms: { uTime: { value: 0 }, uSize: { value: 26 * dpr }, uWarp: { value: 0 }, uDim: { value: 1 } },
   })
   const galaxy = new THREE.Points(buildGalaxy(mobile ? 28000 : 70000), galaxyMat)
   galaxy.rotation.z = 0.12
@@ -209,20 +215,19 @@ export function createGalaxy(canvas: HTMLCanvasElement, { reduce, mobile }: Opti
     transparent: true,
     depthWrite: false,
     blending: THREE.AdditiveBlending,
-    uniforms: { uTime: { value: 0 }, uSize: { value: 1.6 * dpr } },
+    uniforms: { uTime: { value: 0 }, uSize: { value: 1.6 * dpr }, uDim: { value: 1 } },
   })
   const stars = new THREE.Points(buildStars(mobile ? 1800 : 4200), starsMat)
   scene.add(stars)
 
   // Core glow
-  const core = new THREE.Sprite(
-    new THREE.SpriteMaterial({
-      map: cloudTexture("rgba(255,236,250,0.95)", "rgba(196,140,255,0.35)"),
-      blending: THREE.AdditiveBlending,
-      depthWrite: false,
-      transparent: true,
-    }),
-  )
+  const coreMat = new THREE.SpriteMaterial({
+    map: cloudTexture("rgba(255,236,250,0.95)", "rgba(196,140,255,0.35)"),
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
+    transparent: true,
+  })
+  const core = new THREE.Sprite(coreMat)
   core.scale.set(3.4, 3.4, 1)
   scene.add(core)
 
@@ -277,6 +282,8 @@ export function createGalaxy(canvas: HTMLCanvasElement, { reduce, mobile }: Opti
   pulse.position.y = -0.88
   scene.add(pulse)
 
+  const props = createProps(renderer, camera, { mobile, reduce })
+
   // State
   const pointer = { x: 0, y: 0, tx: 0, ty: 0 }
   let progress = 0
@@ -326,6 +333,12 @@ export function createGalaxy(canvas: HTMLCanvasElement, { reduce, mobile }: Opti
     galaxyMat.uniforms.uTime.value = time
     galaxyMat.uniforms.uWarp.value = warp
     starsMat.uniforms.uTime.value = time
+    // The galaxy leads in the hero, then steps back behind the content (the props keep their light)
+    const h = window.innerHeight
+    const dim = 1 - Math.min(1, Math.max(0, (window.scrollY - h * 0.3) / (h * 0.7))) * 0.5
+    galaxyMat.uniforms.uDim.value = dim
+    starsMat.uniforms.uDim.value = dim
+    coreMat.opacity = dim
 
     path.getPointAt(progress, camPos)
     lookPath.getPointAt(progress, camLook)
@@ -340,11 +353,17 @@ export function createGalaxy(canvas: HTMLCanvasElement, { reduce, mobile }: Opti
     camera.fov += ((window.innerWidth < window.innerHeight ? 72 : 55) + warp * 18 - camera.fov) * 0.1
     camera.updateProjectionMatrix()
 
-    for (let i = 0; i < nebulae.length; i++) nebulae[i].material.rotation += dt * 0.02 * (i % 2 ? 1 : -1)
+    for (let i = 0; i < nebulae.length; i++) {
+      nebulae[i].material.rotation += dt * 0.02 * (i % 2 ? 1 : -1)
+      nebulae[i].material.opacity = 0.55 * dim
+    }
     const cycle = (time * 0.18) % 1
     pulse.scale.setScalar(0.5 + cycle * 8.5)
-    pulseMat.opacity = (1 - cycle) * 0.22
+    pulseMat.opacity = (1 - cycle) * 0.22 * dim
+    gridMat.opacity = 0.07 * dim
     stars.rotation.y = time * 0.004
+
+    props.update(reduce ? 0 : dt, e)
 
     renderer.render(scene, camera)
   }
@@ -400,6 +419,7 @@ export function createGalaxy(canvas: HTMLCanvasElement, { reduce, mobile }: Opti
     },
     dispose: () => {
       cancelAnimationFrame(raf)
+      props.dispose()
       window.removeEventListener("resize", onResize)
       window.removeEventListener("scroll", onScroll)
       window.removeEventListener("pointermove", onPointer)

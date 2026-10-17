@@ -1,13 +1,13 @@
 import { useEffect, useRef, useState } from "react"
-import { motion, useReducedMotion, useScroll, useTransform } from "motion/react"
+import { motion, useReducedMotion } from "motion/react"
 import type { Galaxy } from "../three/galaxy"
 import { galaxyBus } from "../three/bus"
 import { Starfield } from "./Starfield"
 
 /**
  * Fixed WebGL galaxy behind the whole page. Three.js loads lazily so the intro
- * paints at once; without WebGL the 2D starfield stands in. The galaxy is a
- * backdrop: it leads in the hero, then dims so each section's content leads.
+ * paints at once; without WebGL the 2D starfield stands in. The galaxy dims
+ * itself behind the content (see galaxy.ts); the voyage hides it via galaxyBus.dim.
  */
 export function GalaxyBackground({ shown, arrived }: { shown: boolean; arrived: boolean }) {
   const ref = useRef<HTMLCanvasElement>(null)
@@ -18,12 +18,6 @@ export function GalaxyBackground({ shown, arrived }: { shown: boolean; arrived: 
   const arrivedRef = useRef(arrived)
   arrivedRef.current = arrived
 
-  const { scrollY } = useScroll()
-  const dim = useTransform(scrollY, (y) => {
-    const h = typeof window === "undefined" ? 800 : window.innerHeight
-    return 1 - Math.min(1, Math.max(0, (y - h * 0.3) / (h * 0.7))) * 0.5
-  })
-  const opacity = useTransform(() => dim.get() * galaxyBus.dim.get())
 
   useEffect(() => {
     let cancelled = false
@@ -55,7 +49,7 @@ export function GalaxyBackground({ shown, arrived }: { shown: boolean; arrived: 
   if (fallback) return <Starfield visible={arrived} />
 
   return (
-    <motion.div aria-hidden className="pointer-events-none fixed inset-0 -z-10" style={{ opacity }}>
+    <motion.div aria-hidden className="pointer-events-none fixed inset-0 -z-10" style={{ opacity: galaxyBus.dim }}>
       <canvas
         ref={ref}
         className="absolute inset-0 transition-opacity duration-[1200ms] ease-out"
