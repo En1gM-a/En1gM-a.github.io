@@ -21,7 +21,7 @@ Open http://localhost:5173.
 
 Name, bio, contact links, projects and skills live in [`src/data/content.ts`](src/data/content.ts). In the bio, wrap text in `**double asterisks**` to highlight it. A project's `status` can be `"live"` or `"wip"` (shows the amber "In development" badge).
 
-There are two photos. [`public/karl-face.webp`](public/karl-face.webp) is a face cut-out with a transparent background; the hero redraws it as an interactive black-and-white dot portrait behind the title. [`public/karl-full.webp`](public/karl-full.webp) is shown whole on the crew card in About (its panel uses `aspect-[416/952]`, so update that if you swap in a photo with a different shape).
+There are two photos. [`public/karl-grad.webp`](public/karl-grad.webp) is the graduation portrait, cut out with a transparent background; the hero redraws it as an interactive black-and-white dot portrait behind the title. [`public/karl-full.webp`](public/karl-full.webp) is shown whole on the crew card in About (its panel uses `aspect-[416/952]`, so update that if you swap in a photo with a different shape).
 
 ### Project previews
 

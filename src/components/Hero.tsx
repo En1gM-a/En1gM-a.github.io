@@ -216,7 +216,7 @@ export function Hero({ stage, skipped, onSkip }: { stage: number; skipped: boole
         aria-hidden
         className="pointer-events-none absolute inset-x-0 bottom-0 z-[4] h-1/3 bg-gradient-to-t from-void via-void/60 to-transparent"
       />
-      <ParticlePortrait src="/karl-face.webp" active={settled} instant={skipped} />
+      <ParticlePortrait src="/karl-grad.webp" active={settled} instant={skipped} />
 
       <motion.div
         style={{ y, opacity }}
