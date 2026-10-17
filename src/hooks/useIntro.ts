@@ -27,6 +27,19 @@ export function useIntro() {
   const stageRef = useRef(stage)
   stageRef.current = stage
 
+  const schedule = useCallback(() => {
+    timers.current.forEach(clearTimeout)
+    setStage(STAGE.spark)
+    timers.current = TIMELINE.map(([s, at]) => window.setTimeout(() => setStage(s), at))
+  }, [])
+
+  /** Run the whole Big Bang again from the singularity (the page should already be at the top) */
+  const replay = useCallback(() => {
+    if (reduce) return
+    setSkipped(false)
+    schedule()
+  }, [reduce, schedule])
+
   const skip = useCallback(() => {
     timers.current.forEach(clearTimeout)
     timers.current = []
@@ -47,14 +60,13 @@ export function useIntro() {
     const fonts = document.fonts?.ready ?? Promise.resolve()
     Promise.race([fonts, new Promise((r) => setTimeout(r, FONT_WAIT_MAX))]).then(() => {
       if (cancelled || stageRef.current !== STAGE.wait) return
-      setStage(STAGE.spark)
-      timers.current = TIMELINE.map(([s, at]) => window.setTimeout(() => setStage(s), at))
+      schedule()
     })
     return () => {
       cancelled = true
       timers.current.forEach(clearTimeout)
     }
-  }, [reduce])
+  }, [reduce, schedule])
 
   // Hold the page still while the intro plays
   useEffect(() => {
@@ -74,5 +86,5 @@ export function useIntro() {
     return () => window.removeEventListener("keydown", onKey)
   }, [stage, skip])
 
-  return { stage, skipped, skip }
+  return { stage, skipped, skip, replay }
 }

@@ -9,6 +9,7 @@ export const galaxyBus = {
     galaxy = g
   },
   warp: (amount: number) => galaxy?.setWarp(amount),
+  pause: (paused: boolean) => galaxy?.setPaused(paused),
   /** Extra dimming on top of the per-section fade, e.g. while the Projects voyage owns the screen */
   dim: motionValue(1),
 }

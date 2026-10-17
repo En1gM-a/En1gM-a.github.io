@@ -9,7 +9,17 @@ const COLORS = ["#ffffff", "#e0f7ff", "#67e8f9", "#a78bfa", "#f0abfc", "#93c5fd"
  * `bang` thousands of motes blast outward with streaking trails, slow down
  * and linger as fresh stars.
  */
-export function BigBang({ bang }: { bang: boolean }) {
+export function BigBang({
+  bang,
+  origin,
+  infall: withInfall = true,
+}: {
+  bang: boolean
+  /** Where the blast starts (viewport px); defaults to the centre */
+  origin?: { x: number; y: number }
+  /** Show matter spiralling into the singularity before the bang */
+  infall?: boolean
+}) {
   const ref = useRef<HTMLCanvasElement>(null)
   const bangRef = useRef(bang)
   bangRef.current = bang
@@ -57,8 +67,8 @@ export function BigBang({ bang }: { bang: boolean }) {
     const explode = () => {
       exploded = true
       explodedAt = performance.now()
-      const cx = w / 2
-      const cy = h / 2
+      const cx = origin?.x ?? w / 2
+      const cy = origin?.y ?? h / 2
       const count = Math.round(Math.min(2600, (w * h) / 650))
       const reach = Math.hypot(w, h) * 0.55
       motes = Array.from({ length: count }, () => {
@@ -92,7 +102,7 @@ export function BigBang({ bang }: { bang: boolean }) {
       if (!exploded) {
         if (bangRef.current) explode()
         // Infall: spiralling inward, brightening as it nears the centre
-        for (const m of infall) {
+        for (const m of withInfall ? infall : []) {
           m.r = Math.max(0, m.r - m.speed * m.r * dt * 1.6)
           m.a += dt * (2.6 / (1 + m.r / 120))
           const x = cx + Math.cos(m.a) * m.r

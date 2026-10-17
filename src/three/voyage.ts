@@ -222,7 +222,19 @@ function miniGalaxy(count: number, inner: THREE.Color, outer: THREE.Color, uSize
 
 export function createVoyage(
   canvas: HTMLCanvasElement,
-  { palettes, read, mobile }: { palettes: Palette[]; read: () => VoyageState; mobile: boolean },
+  {
+    palettes,
+    read,
+    mobile,
+    tall,
+  }: {
+    palettes: Palette[]
+    read: () => VoyageState
+    /** Lighter geometry and resolution for phones */
+    mobile: boolean
+    /** Portrait screens: each planet looms at the top, the project sits below it */
+    tall: boolean
+  },
 ): Voyage | null {
   let renderer: THREE.WebGLRenderer
   try {
@@ -246,7 +258,7 @@ export function createVoyage(
     const side = i % 2 === 0 ? 1 : -1
     const z = -i * SPACING
     const radius = 9.5 + (i % 3) * 0.9
-    const center = new THREE.Vector3(side * SIDE_X, i % 2 ? 1.5 : -1.2, z)
+    const center = tall ? new THREE.Vector3(side * 3.5, 7, z) : new THREE.Vector3(side * SIDE_X, i % 2 ? 1.5 : -1.2, z)
 
     const mat = new THREE.ShaderMaterial({
       vertexShader: planetVertex,
@@ -340,11 +352,11 @@ export function createVoyage(
   // so the planet sits large at the screen edge on its own side
   const station = (i: number, out: THREE.Vector3) => {
     const side = i % 2 === 0 ? 1 : -1
-    return out.set(-side * 2.5, 1.2, -i * SPACING + 33)
+    return tall ? out.set(0, 0.5, -i * SPACING + 36) : out.set(-side * 2.5, 1.2, -i * SPACING + 33)
   }
   const target = (i: number, out: THREE.Vector3) => {
     const side = i % 2 === 0 ? 1 : -1
-    return out.set(-side * 2.5, 0.6, -i * SPACING - 7)
+    return tall ? out.set(0, -1.5, -i * SPACING - 6) : out.set(-side * 2.5, 0.6, -i * SPACING - 7)
   }
 
   const camPos = new THREE.Vector3()
@@ -403,7 +415,7 @@ export function createVoyage(
     }
     camera.position.copy(camPos)
     camera.lookAt(camLook)
-    camera.fov = 48 + warp * 22
+    camera.fov = (tall ? 60 : 48) + warp * (tall ? 18 : 22)
     camera.updateProjectionMatrix()
 
     for (const pl of planets) pl.mesh.rotation.y += dt * pl.spin

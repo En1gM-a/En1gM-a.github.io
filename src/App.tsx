@@ -1,4 +1,5 @@
-import { MotionConfig, motion, useScroll, useSpring } from "motion/react"
+import { useState, type MouseEvent } from "react"
+import { MotionConfig, motion, useReducedMotion, useScroll, useSpring } from "motion/react"
 import { GalaxyBackground } from "./components/GalaxyBackground"
 import { Nav } from "./components/Nav"
 import { Reticle } from "./components/fx/Reticle"
@@ -7,6 +8,7 @@ import { About } from "./components/About"
 import { Skills } from "./components/Skills"
 import { Projects } from "./components/Projects"
 import { Contact } from "./components/Contact"
+import { Supernova } from "./components/Supernova"
 import { STAGE, useIntro } from "./hooks/useIntro"
 import { profile } from "./data/content"
 
@@ -23,8 +25,22 @@ function ScrollProgress() {
 }
 
 export default function App() {
-  const { stage, skipped, skip } = useIntro()
+  const { stage, skipped, skip, replay } = useIntro()
   const online = stage >= STAGE.done
+  const reduce = useReducedMotion()
+  const [nova, setNova] = useState<{ x: number; y: number } | null>(null)
+
+  // "Back to orbit": blow the page up from the link and replay the Big Bang (a plain jump with reduced motion)
+  const backToOrbit = (e: MouseEvent<HTMLAnchorElement>) => {
+    if (reduce || nova) return
+    e.preventDefault()
+    const r = e.currentTarget.getBoundingClientRect()
+    setNova({ x: r.left + r.width / 2, y: r.top + r.height / 2 })
+  }
+  const restart = () => {
+    window.scrollTo({ top: 0, behavior: "instant" })
+    replay()
+  }
 
   return (
     <MotionConfig reducedMotion="user">
@@ -54,10 +70,11 @@ export default function App() {
         <p>
           © {new Date().getFullYear()} {profile.name} <span className="text-cyan">//</span> Transmission end
         </p>
-        <a href="#home" className="flex min-h-11 items-center hover:text-ink">
+        <a href="#home" onClick={backToOrbit} className="flex min-h-11 items-center hover:text-ink">
           Back to orbit ↑
         </a>
       </footer>
+      {nova && <Supernova origin={nova} onBlackout={restart} onDone={() => setNova(null)} />}
     </MotionConfig>
   )
 }

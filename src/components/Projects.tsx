@@ -116,33 +116,59 @@ function Details({ project }: { project: Project }) {
           </li>
         ))}
       </ul>
-      <div className="mt-7 flex flex-wrap gap-3">
-        <a
-          href={project.repo}
-          target="_blank"
-          rel="noreferrer"
-          className="flex h-11 items-center gap-2 rounded-full border border-line bg-void/40 px-5 text-sm backdrop-blur transition-colors hover:border-white/30 hover:bg-white/5"
-        >
-          <GitHubIcon width={16} height={16} /> Source
-          <span className="sr-only"> code for {project.name} (opens in new tab)</span>
-        </a>
-        {project.live && (
-          <a
-            href={project.live}
-            target="_blank"
-            rel="noreferrer"
-            className="flex h-11 items-center gap-2 rounded-full bg-ink px-5 text-sm font-semibold text-void transition-opacity hover:opacity-85"
-          >
-            Live site <ArrowUpRight width={16} height={16} />
-            <span className="sr-only"> for {project.name} (opens in new tab)</span>
-          </a>
-        )}
-      </div>
+      <Links project={project} className="mt-7" />
     </div>
   )
 }
 
-/* ------------------------------------------------------------------ Voyage (desktop) */
+function Links({ project, className = "" }: { project: Project; className?: string }) {
+  return (
+    <div className={`flex flex-wrap gap-3 ${className}`}>
+      <a
+        href={project.repo}
+        target="_blank"
+        rel="noreferrer"
+        className="flex h-11 items-center gap-2 rounded-full border border-line bg-void/40 px-5 text-sm backdrop-blur transition-colors hover:border-white/30 hover:bg-white/5"
+      >
+        <GitHubIcon width={16} height={16} /> Source
+        <span className="sr-only"> code for {project.name} (opens in new tab)</span>
+      </a>
+      {project.live && (
+        <a
+          href={project.live}
+          target="_blank"
+          rel="noreferrer"
+          className="flex h-11 items-center gap-2 rounded-full bg-ink px-5 text-sm font-semibold text-void transition-opacity hover:opacity-85"
+        >
+          Live site <ArrowUpRight width={16} height={16} />
+          <span className="sr-only"> for {project.name} (opens in new tab)</span>
+        </a>
+      )}
+    </div>
+  )
+}
+
+/** Phone version: what fits under the planet on a tall screen */
+function CompactDetails({ project }: { project: Project }) {
+  return (
+    <div className="flex flex-col">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="label text-[10px]">
+          <span className="text-cyan">{project.code}</span> · {project.kind}
+        </p>
+        <StatusBadge status={project.status} />
+      </div>
+      <h3 className="display mt-3 text-[clamp(30px,9vw,44px)]">{project.name}</h3>
+      <p className="mt-3 line-clamp-4 text-[15px] leading-relaxed text-dim">{project.summary}</p>
+      <div className="mt-5 w-[86%] max-w-sm [@media(max-height:700px)]:hidden">
+        <Preview project={project} />
+      </div>
+      <Links project={project} className="mt-6" />
+    </div>
+  )
+}
+
+/* ------------------------------------------------------------------ Voyage */
 
 /** One destination's content: drifts in from the distance on arrival, rushes past and blurs on departure */
 function Destination({
@@ -151,12 +177,14 @@ function Destination({
   route,
   entry,
   onFocusTravel,
+  wide,
 }: {
   project: Project
   index: number
   route: MotionValue<number>
   entry: MotionValue<number>
   onFocusTravel: (i: number) => void
+  wide: boolean
 }) {
   const planetRight = index % 2 === 0
   const d = useTransform(route, (v) => v - index)
@@ -172,6 +200,21 @@ function Destination({
     return `blur(${(blur * 14).toFixed(2)}px)`
   })
   const pointerEvents = useTransform(d, (v) => (Math.abs(v) < 0.25 ? "auto" : "none"))
+
+  if (!wide)
+    return (
+      <motion.article
+        aria-labelledby={`planet-${index}`}
+        onFocusCapture={() => onFocusTravel(index)}
+        style={{ opacity, scale, y, filter, pointerEvents }}
+        className="gutter absolute inset-x-0 bottom-20 flex flex-col"
+      >
+        <p id={`planet-${index}`} className="label mb-2 text-cyan">
+          Planet {project.planet.name}
+        </p>
+        <CompactDetails project={project} />
+      </motion.article>
+    )
 
   return (
     <motion.article
@@ -194,8 +237,9 @@ function Destination({
   )
 }
 
-function Voyage() {
+function Voyage({ wide }: { wide: boolean }) {
   const track = useRef<HTMLDivElement>(null)
+  const stage = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const n = projects.length
 
@@ -219,7 +263,12 @@ function Voyage() {
   // The background galaxy steps back and joins the jump while the voyage owns the screen
   useMotionValueEvent(warp, "change", (v) => galaxyBus.warp(v * 0.5))
   useEffect(() => {
-    const update = () => galaxyBus.dim.set(1 - 0.7 * entryRaw.get() * (1 - exit.get()))
+    const update = () => {
+      const inside = entryRaw.get() * (1 - exit.get())
+      galaxyBus.dim.set(1 - 0.7 * inside)
+      // Only one 3D scene renders at a time once the voyage fills the screen
+      galaxyBus.pause(inside > 0.97)
+    }
     const a = entryRaw.on("change", update)
     const b = exit.on("change", update)
     update()
@@ -228,6 +277,7 @@ function Voyage() {
       b()
       galaxyBus.dim.set(1)
       galaxyBus.warp(0)
+      galaxyBus.pause(false)
     }
   }, [entryRaw, exit])
 
@@ -238,7 +288,8 @@ function Voyage() {
       if (cancelled || !canvasRef.current) return
       scene = createVoyage(canvasRef.current, {
         palettes: projects.map((p) => p.planet.palette),
-        mobile: false,
+        mobile: !wide,
+        tall: !wide,
         read: () => ({ p: route.get(), warp: warp.get(), entry: entry.get() }),
       })
     })
@@ -246,14 +297,15 @@ function Voyage() {
       cancelled = true
       scene?.dispose()
     }
-  }, [route, warp, entry])
+  }, [route, warp, entry, wide])
 
   const travelTo = (i: number) => {
     const el = track.current
     if (!el) return
     const top = el.getBoundingClientRect().top + window.scrollY
+    const screen = stage.current?.offsetHeight ?? window.innerHeight
     // Land a little into the destination's hold, so it is fully arrived
-    window.scrollTo({ top: top + i * window.innerHeight + 8, behavior: "smooth" })
+    window.scrollTo({ top: top + i * screen + 8, behavior: "smooth" })
   }
   const onFocusTravel = (i: number) => {
     if (Math.round(route.get()) !== i) travelTo(i)
@@ -262,20 +314,28 @@ function Voyage() {
   const current = projects[Math.min(n - 1, Math.max(0, active))]
 
   return (
-    <div ref={track} className="relative" style={{ height: `${(n + TAIL) * 100}vh` }}>
-      <div className="sticky top-0 h-screen overflow-hidden">
+    <div ref={track} className="relative" style={{ height: `${(n + TAIL) * 100}svh` }}>
+      {/* svh: the small viewport, so phone address bars never hide the rail */}
+      <div ref={stage} className="sticky top-0 h-svh overflow-hidden">
         <canvas ref={canvasRef} aria-hidden className="absolute inset-0 h-full w-full" />
+        {/* On tall screens the project sits under the planet; darken that half for reading */}
+        {!wide && (
+          <div aria-hidden className="pointer-events-none absolute inset-x-0 bottom-0 h-[72%] bg-gradient-to-t from-void via-void/85 to-transparent" />
+        )}
         {/* Edge falloff keeps text readable against bright planets */}
         <div aria-hidden className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_80%_70%_at_50%_50%,transparent_40%,rgb(3_4_9/0.55)_100%)]" />
 
         {projects.map((p, i) => (
-          <Destination key={p.code} project={p} index={i} route={route} entry={entry} onFocusTravel={onFocusTravel} />
+          <Destination key={p.code} project={p} index={i} route={route} entry={entry} onFocusTravel={onFocusTravel} wide={wide} />
         ))}
 
         {/* HUD */}
         <div aria-hidden className="gutter pointer-events-none absolute inset-x-0 top-20 flex items-center justify-between">
           <p className="label">
-            Voyage <span className="text-cyan">//</span> Destination{" "}
+            <span className="hidden sm:inline">
+              Voyage <span className="text-cyan">//</span>{" "}
+            </span>
+            Destination{" "}
             <span className="text-ink">
               {String(active + 1).padStart(2, "0")} / {String(n).padStart(2, "0")}
             </span>
@@ -287,7 +347,7 @@ function Voyage() {
 
         <motion.p
           aria-hidden
-          className="label pointer-events-none absolute top-1/2 left-1/2 -translate-1/2 text-[12px] whitespace-nowrap text-cyan"
+          className="label pointer-events-none absolute top-[30%] left-1/2 -translate-1/2 text-[12px] whitespace-nowrap text-cyan lg:top-1/2"
           style={{ opacity: warpLabel }}
         >
           Warp ▸ Planet {projects[next].planet.name}
@@ -311,7 +371,7 @@ function Voyage() {
                         active === i ? "scale-125 border-cyan bg-cyan" : "border-white/40 bg-void group-hover:border-cyan/70"
                       }`}
                     />
-                    <span className={`label mt-2 text-[9px] whitespace-nowrap ${active === i ? "text-ink" : ""}`}>{p.planet.name}</span>
+                    <span className={`label mt-2 hidden text-[9px] whitespace-nowrap lg:block ${active === i ? "text-ink" : ""}`}>{p.planet.name}</span>
                     <span className="sr-only"> — travel to {p.name}</span>
                   </button>
                 </li>
@@ -366,7 +426,7 @@ function ProjectList() {
 export function Projects() {
   const reduce = useReducedMotion()
   const desktop = useDesktop()
-  const voyage = desktop && !reduce
+  const voyage = !reduce
   const live = projects.filter((p) => p.status === "live").length
   const wip = projects.filter((p) => p.status === "wip").length
 
@@ -379,7 +439,7 @@ export function Projects() {
         />
       </div>
 
-      {voyage ? <Voyage /> : <ProjectList />}
+      {voyage ? <Voyage key={desktop ? "wide" : "tall"} wide={desktop} /> : <ProjectList />}
 
       <div className="gutter pt-8 pb-24 sm:pb-32">
         <motion.aside

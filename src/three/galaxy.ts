@@ -4,6 +4,8 @@ export type Galaxy = {
   /** 0..1 — how far the camera has flown in from deep space */
   arrive: (on: boolean) => void
   setWarp: (amount: number) => void
+  /** Skip rendering (the last frame stays on screen), e.g. while another scene owns the screen */
+  setPaused: (paused: boolean) => void
   dispose: () => void
 }
 
@@ -347,8 +349,10 @@ export function createGalaxy(canvas: HTMLCanvasElement, { reduce, mobile }: Opti
     renderer.render(scene, camera)
   }
 
+  let paused = false
   const loop = (now: number) => {
-    render(now)
+    if (paused) last = now
+    else render(now)
     raf = requestAnimationFrame(loop)
   }
 
@@ -380,11 +384,16 @@ export function createGalaxy(canvas: HTMLCanvasElement, { reduce, mobile }: Opti
   return {
     arrive: (on) => {
       arriving = on
+      // Leaving (a replayed Big Bang): back out to deep space, ready to fly in again
+      if (!on && !reduce) arriveT = 0
       // Drop out of warp as we arrive: the stars streak, then settle
       if (on && !reduce) {
         warp = 1
         warpTarget = 0
       }
+    },
+    setPaused: (p) => {
+      paused = p
     },
     setWarp: (amount) => {
       warpTarget = reduce ? 0 : amount

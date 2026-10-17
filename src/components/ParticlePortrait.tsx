@@ -259,6 +259,8 @@ export function ParticlePortrait({ src, active, instant = false }: { src: string
 
     return () => {
       pause()
+      // Clear the last frame, so a replayed intro starts from an empty sky
+      ctx.clearRect(0, 0, w, h)
       io.disconnect()
       window.removeEventListener("resize", onResize)
       window.removeEventListener("pointermove", onPointer)
