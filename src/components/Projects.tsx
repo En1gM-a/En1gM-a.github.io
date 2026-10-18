@@ -14,6 +14,10 @@ import { ArrowUpRight, GitHubIcon } from "./icons"
 import { ProjectPreview } from "./previews"
 import { useTilt } from "./fx/useTilt"
 import { galaxyBus } from "../three/bus"
+import { bootReady } from "../boot"
+
+// The planets bake once the intro has played (it runs about 4.5 s after the loader lets go)
+const afterIntro = bootReady.then(() => new Promise((r) => window.setTimeout(r, 4800)))
 import type { Voyage as VoyageScene } from "../three/voyage"
 import { archive, profile, projects, type Project } from "../data/content"
 
@@ -285,15 +289,18 @@ function Voyage({ wide }: { wide: boolean }) {
   useEffect(() => {
     let scene: VoyageScene | null = null
     let cancelled = false
-    import("../three/voyage").then(({ createVoyage }) => {
-      if (cancelled || !canvasRef.current) return
-      scene = createVoyage(canvasRef.current, {
-        palettes: projects.map((p) => p.planet.palette),
-        mobile: !wide,
-        tall: !wide,
-        read: () => ({ p: route.get(), warp: warp.get(), entry: entry.get() }),
+    import("../three/voyage")
+      .then(({ createVoyage }) => {
+        if (cancelled || !canvasRef.current) return
+        scene = createVoyage(canvasRef.current, {
+          palettes: projects.map((p) => p.planet.palette),
+          mobile: !wide,
+          tall: !wide,
+          read: () => ({ p: route.get(), warp: warp.get(), entry: entry.get() }),
+          bakeAfter: afterIntro,
+        })
       })
-    })
+      .catch(() => {})
     return () => {
       cancelled = true
       scene?.dispose()

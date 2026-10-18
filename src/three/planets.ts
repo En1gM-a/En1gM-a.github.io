@@ -52,7 +52,7 @@ const noiseGlsl = /* glsl */ `
     return mix(mix(mix(hash(i), hash(i + vec3(1.0, 0.0, 0.0)), f.x), mix(hash(i + vec3(0.0, 1.0, 0.0)), hash(i + vec3(1.0, 1.0, 0.0)), f.x), f.y),
                mix(mix(hash(i + vec3(0.0, 0.0, 1.0)), hash(i + vec3(1.0, 0.0, 1.0)), f.x), mix(hash(i + vec3(0.0, 1.0, 1.0)), hash(i + vec3(1.0, 1.0, 1.0)), f.x), f.y), f.z);
   }
-  float fbm(vec3 p) { float v = 0.0; float a = 0.5; for (int i = 0; i < 7; i++) { v += a * noise(p); p = p * 2.03 + vec3(1.7, 9.2, 3.1); a *= 0.5; } return v; }
+  float fbm(vec3 p) { float v = 0.0; float a = 0.5; for (int i = 0; i < 6; i++) { v += a * noise(p); p = p * 2.03 + vec3(1.7, 9.2, 3.1); a *= 0.5; } return v; }
   float ridge(vec3 p) { float v = 0.0; float a = 0.5; for (int i = 0; i < 6; i++) { float n = 1.0 - abs(noise(p) * 2.0 - 1.0); v += a * n * n; p = p * 2.07 + vec3(4.1, 1.3, 7.7); a *= 0.5; } return v; }
   vec3 twist(vec3 v, vec3 k, float a) { float c = cos(a); float s = sin(a); return v * c + cross(k, v) * s + k * dot(k, v) * (1.0 - c); }
 `
@@ -290,6 +290,8 @@ export function createPlanetBaker(renderer: THREE.WebGLRenderer, { mobile }: { m
   scene.add(quad)
   const anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy())
   const targets: THREE.WebGLRenderTarget[] = []
+  // The noise shader is heavy for Direct3D's compiler: compile it off the main thread before the first bake
+  const ready = renderer.compileAsync(scene, cam).catch(() => {})
 
   const pass = (w: number, h: number, format: THREE.PixelFormat) => {
     const rt = new THREE.WebGLRenderTarget(w, h, {
@@ -311,6 +313,7 @@ export function createPlanetBaker(renderer: THREE.WebGLRenderer, { mobile }: { m
   }
 
   return {
+    ready,
     bake: (look: PlanetLook, pal: Palette, index: number) => {
       const u = mat.uniforms
       u.uA.value.set(pal.a)
@@ -320,7 +323,7 @@ export function createPlanetBaker(renderer: THREE.WebGLRenderer, { mobile }: { m
       u.uBands.value = look.surface.uniforms.uBands.value
       u.uKind.value = look.kind
       u.uLayer.value = 0
-      const surface = mobile ? pass(1024, 512, THREE.RGBAFormat) : pass(1536, 768, THREE.RGBAFormat)
+      const surface = mobile ? pass(1024, 512, THREE.RGBAFormat) : pass(1280, 640, THREE.RGBAFormat)
       look.surface.uniforms.uMap.value = surface.texture
       look.surface.uniforms.uReady.value = 1
       if (look.clouds) {

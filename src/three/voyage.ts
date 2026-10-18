@@ -159,6 +159,7 @@ export function createVoyage(
     read,
     mobile,
     tall,
+    bakeAfter,
   }: {
     palettes: Palette[]
     read: () => VoyageState
@@ -166,6 +167,8 @@ export function createVoyage(
     mobile: boolean
     /** Portrait screens: each planet looms at the top, the project sits below it */
     tall: boolean
+    /** Hold the surface bakes (GPU passes) until this settles, e.g. until the intro has played */
+    bakeAfter?: Promise<unknown>
   },
 ): Voyage | null {
   let renderer: THREE.WebGLRenderer
@@ -295,7 +298,11 @@ export function createVoyage(
   // corner above each planet (beside it on phones), clear of the project details
   const env = spaceEnvironment(renderer)
   scene.environment = env
-  const astro = createAstronaut({ tether: false, shadows: !mobile })
+  const astro = createAstronaut({
+    tether: false,
+    shadows: !mobile,
+    warm: (suit) => renderer.compileAsync(suit, camera, scene),
+  })
   scene.add(camera)
   camera.add(astro.root)
   const sun = new THREE.DirectionalLight(0xfff3e6, 3.2)
@@ -318,34 +325,41 @@ export function createVoyage(
   const astroWorld = new THREE.Vector3()
   const rimDir = new THREE.Vector3()
 
-  // Bake the planet surfaces and nebulae once the page has settled, one per idle slot; if the voyage
-  // comes into view first, finish them at once so the planets never show their placeholder
+  // Bake the planet surfaces and nebulae while the loader covers the page: each shader compiles off the
+  // main thread first, then one surface per frame; if the voyage comes into view first, finish at once
   const baker = createPlanetBaker(renderer, { mobile })
   const nebulaPalettes = palettes.map((pal) => {
     const h = (c: string) => parseInt(c.slice(1), 16)
     return [h(pal.atmo), h(pal.c), h(pal.b), h(pal.c)] as [number, number, number, number]
   })
   let nebulaTargets: THREE.WebGLRenderTarget[] = []
-  const jobs: (() => void)[] = [
-    ...palettes.map((pal, i) => () => baker.bake(looks[i], pal, i)),
-    () => {
-      if (!nebulae.length) return
-      nebulaTargets = bakeNebulae(renderer, nebulaPalettes, 768)
-      nebulae.forEach((nb, i) => (nb.mat.uniforms.uMap.value = nebulaTargets[i].texture))
-    },
-  ]
-  let bakeTimer = 0
-  const bakeNext = () => {
-    jobs.shift()?.()
-    if (jobs.length) bakeTimer = window.setTimeout(bakeNext, 90)
+  let hurry = false
+  let stopped = false
+  const nextFrame = () => (hurry ? Promise.resolve() : new Promise<void>((r) => requestAnimationFrame(() => r())))
+  const bakeAll = async () => {
+    // Shaders compile off the main thread now; the bakes themselves wait until the intro has played
+    const compiled = renderer.compileAsync(scene, camera).catch(() => {})
+    await Promise.all([baker.ready, bakeAfter])
+    for (let i = 0; i < palettes.length; i++) {
+      if (stopped) return
+      baker.bake(looks[i], palettes[i], i)
+      await nextFrame()
+    }
+    if (nebulae.length && !stopped) {
+      const targets = await bakeNebulae(renderer, nebulaPalettes, 512)
+      if (stopped) return targets.forEach((t) => t.dispose())
+      nebulaTargets = targets
+      nebulae.forEach((nb, i) => (nb.mat.uniforms.uMap.value = targets[i].texture))
+    }
+    // Display shaders compiled in the background; one warm-up frame uploads everything to the GPU
+    await compiled
+    if (stopped) return
+    render(performance.now())
   }
+  bakeAll()
   const flushBakes = () => {
-    window.clearTimeout(bakeTimer)
-    while (jobs.length) jobs.shift()?.()
+    hurry = true
   }
-  const startBaking = () => (bakeTimer = window.setTimeout(bakeNext, 2500))
-  if (document.readyState === "complete") startBaking()
-  else window.addEventListener("load", startBaking, { once: true })
   const sideOf = (i: number) => (i % 2 === 0 ? 1 : -1)
 
   // Camera stations: parked up the route from each planet, looking straight ahead,
@@ -520,7 +534,8 @@ export function createVoyage(
       })
       glow.dispose()
       env.dispose()
-      flushBakes()
+      // Torn down mid-bake (e.g. crossing the desktop breakpoint): drop the rest, no warm-up frame
+      stopped = true
       baker.dispose()
       nebulaTargets.forEach((t) => t.dispose())
       looks.forEach((l) => l.dispose())

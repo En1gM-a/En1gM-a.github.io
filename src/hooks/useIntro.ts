@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 import { useReducedMotion } from "motion/react"
+import { bootReady } from "../boot"
 
 /**
  * Intro timeline, a Big Bang:
@@ -7,9 +8,6 @@ import { useReducedMotion } from "motion/react"
  * 3 glitch-decrypt to PORTFOLIO · 4 hyperspace arrival + stars assemble the photo · 5 online
  */
 export const STAGE = { wait: -1, spark: 0, bang: 1, letters: 2, decrypt: 3, settle: 4, done: 5 } as const
-
-// Starting before the display font lands would reflow the intro mid-flight
-const FONT_WAIT_MAX = 900
 
 const TIMELINE: [number, number][] = [
   [STAGE.bang, 1150],
@@ -57,8 +55,8 @@ export function useIntro() {
     if ("scrollRestoration" in history) history.scrollRestoration = "manual"
     window.scrollTo(0, 0)
     let cancelled = false
-    const fonts = document.fonts?.ready ?? Promise.resolve()
-    Promise.race([fonts, new Promise((r) => setTimeout(r, FONT_WAIT_MAX))]).then(() => {
+    // Wait for the loader: fonts, the portrait and the 3D scenes are ready, so nothing lands mid-animation
+    bootReady.then(() => {
       if (cancelled || stageRef.current !== STAGE.wait) return
       schedule()
     })

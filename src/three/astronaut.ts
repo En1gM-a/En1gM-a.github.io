@@ -46,24 +46,37 @@ const tetherFragment = /* glsl */ `
 
 const easeInOut = (k: number) => (k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2)
 
-export function createAstronaut({ tether = true, shadows = false, onReady }: { tether?: boolean; shadows?: boolean; onReady?: () => void } = {}): Astronaut {
+export function createAstronaut({
+  tether = true,
+  shadows = false,
+  onReady,
+  warm,
+}: {
+  tether?: boolean
+  shadows?: boolean
+  onReady?: () => void
+  /** Prepare the suit (compile its shaders) before it joins the scene, so its arrival never stalls a frame */
+  warm?: (suit: THREE.Object3D) => Promise<unknown>
+} = {}): Astronaut {
   const root = new THREE.Group()
   const body = new THREE.Group()
   root.add(body)
 
   let ready = false
   loadSuit()
-    .then((suit) => {
+    .then(async (suit) => {
       suit.traverse((o) => {
         // The densest small parts (visor, helmet shell) add little to the shadow but a lot to its cost
         o.castShadow = shadows && !o.userData.heavy
         o.receiveShadow = shadows
       })
+      await warm?.(suit).catch(() => {})
       body.add(suit)
       ready = true
       onReady?.()
     })
-    .catch(() => {})
+    // Without the suit there is nothing to wait for
+    .catch(() => onReady?.())
 
   // Data tether from the backpack, trailing off-screen to the right
   const PACK = new THREE.Vector3(0, -0.45, -0.5)

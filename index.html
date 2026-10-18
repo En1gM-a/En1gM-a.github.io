@@ -30,9 +30,156 @@
         background: #030409;
         color-scheme: dark;
       }
+      /* Boot loader: a singularity gathering at the centre, where the intro's Big Bang begins */
+      #boot {
+        position: fixed;
+        inset: 0;
+        z-index: 100;
+        background:
+          radial-gradient(1px 1px at 18% 26%, rgba(255, 255, 255, 0.55), transparent),
+          radial-gradient(1px 1px at 72% 18%, rgba(255, 255, 255, 0.4), transparent),
+          radial-gradient(1px 1px at 86% 64%, rgba(255, 255, 255, 0.5), transparent),
+          radial-gradient(1px 1px at 34% 78%, rgba(255, 255, 255, 0.35), transparent),
+          radial-gradient(1px 1px at 58% 88%, rgba(255, 255, 255, 0.45), transparent),
+          radial-gradient(1.5px 1.5px at 9% 58%, rgba(207, 230, 255, 0.6), transparent),
+          radial-gradient(1.5px 1.5px at 92% 34%, rgba(255, 210, 160, 0.5), transparent),
+          #030409;
+        transition: opacity 0.5s ease;
+      }
+      #boot.boot-out {
+        opacity: 0;
+        pointer-events: none;
+      }
+      .boot-core {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 92px;
+        height: 92px;
+        margin: -46px 0 0 -46px;
+      }
+      .boot-dot {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 6px;
+        height: 6px;
+        margin: -3px 0 0 -3px;
+        border-radius: 50%;
+        background: #fff;
+        box-shadow:
+          0 0 10px 3px rgba(230, 248, 255, 0.9),
+          0 0 40px 12px rgba(103, 232, 249, 0.35),
+          0 0 90px 30px rgba(167, 139, 250, 0.18);
+        animation: boot-breathe 2.4s ease-in-out infinite;
+      }
+      .boot-orbit {
+        position: absolute;
+        inset: 0;
+        border-radius: 50%;
+        border: 1px dashed rgba(103, 232, 249, 0.25);
+        animation: boot-spin 3.2s linear infinite;
+        transition: opacity 0.3s ease;
+      }
+      .boot-orbit i {
+        position: absolute;
+        top: -2px;
+        left: 50%;
+        width: 4px;
+        height: 4px;
+        margin-left: -2px;
+        border-radius: 50%;
+        background: #67e8f9;
+        box-shadow: 0 0 8px 2px rgba(103, 232, 249, 0.7);
+      }
+      .boot-meta {
+        position: absolute;
+        top: calc(50% + 76px);
+        left: 50%;
+        width: 220px;
+        margin-left: -110px;
+        font: 500 11px/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        letter-spacing: 0.22em;
+        text-transform: uppercase;
+        color: #8b93ad;
+        transition: opacity 0.3s ease;
+      }
+      .boot-line {
+        display: flex;
+        justify-content: space-between;
+        margin: 0;
+      }
+      #boot-pct {
+        color: #67e8f9;
+        font-variant-numeric: tabular-nums;
+      }
+      .boot-bar {
+        display: block;
+        height: 1px;
+        margin: 10px 0;
+        background: rgba(255, 255, 255, 0.12);
+        overflow: hidden;
+      }
+      .boot-bar i {
+        display: block;
+        height: 100%;
+        transform: scaleX(0.03);
+        transform-origin: left;
+        background: linear-gradient(90deg, #67e8f9, #a78bfa);
+      }
+      .boot-task {
+        margin: 0;
+        min-height: 1.4em;
+        font-size: 10px;
+        letter-spacing: 0.18em;
+        color: #7d86a3;
+        text-align: center;
+      }
+      .boot-sr {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip: rect(0 0 0 0);
+        white-space: nowrap;
+      }
+      #boot.boot-ready .boot-orbit,
+      #boot.boot-ready .boot-meta {
+        opacity: 0;
+      }
+      @keyframes boot-spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+      @keyframes boot-breathe {
+        50% {
+          transform: scale(0.7);
+          opacity: 0.8;
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .boot-dot,
+        .boot-orbit {
+          animation: none;
+        }
+      }
     </style>
+    <noscript><style>#boot { display: none; }</style></noscript>
   </head>
   <body>
+    <div id="boot">
+      <div class="boot-core" aria-hidden="true">
+        <span class="boot-orbit"><i></i></span>
+        <span class="boot-dot"></span>
+      </div>
+      <div class="boot-meta" aria-hidden="true">
+        <p class="boot-line"><span>Initializing</span><span id="boot-pct">0%</span></p>
+        <span class="boot-bar"><i id="boot-fill"></i></span>
+        <p id="boot-task" class="boot-task">Establishing uplink</p>
+      </div>
+      <p id="boot-sr" class="boot-sr" role="status">Loading the portfolio</p>
+    </div>
     <div id="root"></div>
     <noscript>
       <main style="font-family: system-ui, sans-serif; color: #eef1f8; padding: 48px 24px; max-width: 640px">

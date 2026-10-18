@@ -3,6 +3,7 @@ import { motion, useReducedMotion } from "motion/react"
 import type { Galaxy } from "../three/galaxy"
 import { galaxyBus } from "../three/bus"
 import { Starfield } from "./Starfield"
+import { afterFrames, bootDone } from "../boot"
 
 /**
  * Fixed WebGL galaxy behind the whole page. Three.js loads lazily so the intro
@@ -21,19 +22,29 @@ export function GalaxyBackground({ shown, arrived }: { shown: boolean; arrived: 
 
   useEffect(() => {
     let cancelled = false
-    import("../three/galaxy").then(({ createGalaxy }) => {
-      if (cancelled || !ref.current) return
-      const g = createGalaxy(ref.current, {
-        reduce: !!reduce,
-        mobile: window.matchMedia("(max-width: 767px), (pointer: coarse)").matches,
+    const fallback = () => {
+      bootDone("galaxy")
+      bootDone("suit")
+      setFallback(true)
+    }
+    import("../three/galaxy")
+      .then(({ createGalaxy }) => {
+        if (cancelled || !ref.current) return
+        const g = createGalaxy(ref.current, {
+          reduce: !!reduce,
+          mobile: window.matchMedia("(max-width: 767px), (pointer: coarse)").matches,
+          // A couple of rendered frames compile the suit's shaders before the loader lets go
+          onSuit: () => afterFrames(2, () => bootDone("suit")),
+        })
+        if (!g) return fallback()
+        galaxy.current = g
+        galaxyBus.attach(g)
+        // A scene created after the intro finished must arrive straight away
+        if (arrivedRef.current) g.arrive(true)
+        setReady(true)
+        g.ready.then(() => afterFrames(2, () => bootDone("galaxy")))
       })
-      if (!g) return setFallback(true)
-      galaxy.current = g
-      galaxyBus.attach(g)
-      // A scene created after the intro finished must arrive straight away
-      if (arrivedRef.current) g.arrive(true)
-      setReady(true)
-    })
+      .catch(fallback)
     return () => {
       cancelled = true
       galaxyBus.attach(null)

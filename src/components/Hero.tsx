@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react"
 import { AnimatePresence, motion, useReducedMotion, useScroll, useTransform } from "motion/react"
 import { BigBang } from "./BigBang"
+import { Plasma } from "./Plasma"
 import { ParticlePortrait } from "./ParticlePortrait"
 import { ArrowDown } from "./icons"
 import { STAGE } from "../hooks/useIntro"
@@ -42,7 +43,14 @@ function IntroStage({ stage, onSkip }: { stage: number; onSkip: () => void }) {
   }, [])
 
   return (
-    <div className="fixed inset-0 z-40 flex items-center justify-center" onPointerDown={onSkip}>
+    <motion.div
+      className="fixed inset-0 z-40 flex items-center justify-center"
+      onPointerDown={onSkip}
+      // The blast knocks the camera, then it settles
+      animate={banged ? { x: [0, -8, 7, -5, 3, -1, 0], y: [0, 5, -6, 4, -2, 1, 0] } : undefined}
+      transition={{ duration: 0.55, ease: [0.2, 0.7, 0.3, 1] }}
+    >
+      <Plasma bang={banged} />
       <BigBang bang={banged} />
 
       {/* The singularity: unstable, gathering, then gone in the flash */}
@@ -65,33 +73,6 @@ function IntroStage({ stage, onSkip }: { stage: number; onSkip: () => void }) {
         <span className="absolute top-1/2 left-1/2 h-px w-16 -translate-1/2 bg-gradient-to-r from-transparent via-white/90 to-transparent" />
         <span className="absolute top-1/2 left-1/2 h-10 w-px -translate-1/2 bg-gradient-to-b from-transparent via-white/80 to-transparent" />
       </motion.span>
-
-      {/* Flash and shockwaves */}
-      {banged && (
-        <>
-          <motion.div
-            aria-hidden
-            className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,#ffffff_0%,rgb(200_240_255/0.7)_22%,rgb(167_139_250/0.25)_45%,transparent_70%)]"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: [0, 1, 0] }}
-            transition={{ duration: 0.8, times: [0, 0.08, 1], ease: "easeOut" }}
-          />
-          {[
-            ["border-white/80", 1.1, 0],
-            ["border-cyan/70", 1.5, 0.08],
-            ["border-violet/60", 2, 0.18],
-          ].map(([cls, duration, delay]) => (
-            <motion.span
-              key={String(cls)}
-              aria-hidden
-              className={`absolute top-1/2 left-1/2 -mt-5 -ml-5 size-10 rounded-full border-2 ${cls}`}
-              initial={{ scale: 0, opacity: 0.9 }}
-              animate={{ scale: 70, opacity: 0 }}
-              transition={{ duration: Number(duration), delay: Number(delay), ease: [0.16, 1, 0.3, 1] }}
-            />
-          ))}
-        </>
-      )}
 
       {stage < STAGE.decrypt && (
         // Same PORTFOLIO-wide box as the decrypting word, so KARL stays put when the glyphs take over
@@ -159,7 +140,7 @@ function IntroStage({ stage, onSkip }: { stage: number; onSkip: () => void }) {
       >
         Skip intro <kbd className="rounded border border-line px-1.5 py-0.5 text-[10px]">esc</kbd>
       </button>
-    </div>
+    </motion.div>
   )
 }
 

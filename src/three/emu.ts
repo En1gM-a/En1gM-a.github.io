@@ -17,17 +17,8 @@ let suit: Promise<THREE.Group> | null = null
  * caller gets its own clone, sharing geometry and materials.
  */
 export function loadSuit(): Promise<THREE.Group> {
-  suit ??= afterLoad().then(() => fetchSuit())
+  suit ??= fetchSuit()
   return suit.then((s) => s.clone(true))
-}
-
-/** The suit is 3.4 MB: let the page and the intro's assets land first */
-function afterLoad() {
-  return new Promise<void>((resolve) => {
-    const go = () => window.setTimeout(resolve, 1500)
-    if (document.readyState === "complete") go()
-    else window.addEventListener("load", go, { once: true })
-  })
 }
 
 function fetchSuit() {

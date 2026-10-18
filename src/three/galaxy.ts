@@ -7,10 +7,12 @@ export type Galaxy = {
   setWarp: (amount: number) => void
   /** Skip rendering (the last frame stays on screen), e.g. while another scene owns the screen */
   setPaused: (paused: boolean) => void
+  /** Shaders compiled and clouds baked: the first frames won't stall */
+  ready: Promise<void>
   dispose: () => void
 }
 
-type Options = { reduce: boolean; mobile: boolean }
+type Options = { reduce: boolean; mobile: boolean; /** The astronaut's suit has arrived (or failed to) */ onSuit?: () => void }
 
 const galaxyVertex = /* glsl */ `
   uniform float uTime;
@@ -177,7 +179,7 @@ const LOOK = [
   new THREE.Vector3(0, -0.2, 0),
 ]
 
-export function createGalaxy(canvas: HTMLCanvasElement, { reduce, mobile }: Options): Galaxy | null {
+export function createGalaxy(canvas: HTMLCanvasElement, { reduce, mobile, onSuit }: Options): Galaxy | null {
   const dpr = Math.min(window.devicePixelRatio || 1, mobile ? 1.5 : 1.75)
   let renderer: THREE.WebGLRenderer
   try {
@@ -290,7 +292,7 @@ export function createGalaxy(canvas: HTMLCanvasElement, { reduce, mobile }: Opti
   scene.add(pulse)
 
   // A static (reduced-motion) page redraws when the suit lands
-  const props = createProps(renderer, scene, camera, { mobile, reduce, invalidate: () => reduce && render(performance.now()) })
+  const props = createProps(renderer, scene, camera, { mobile, reduce, invalidate: () => reduce && started && render(performance.now()), onSuit })
 
   // State
   const pointer = { x: 0, y: 0, tx: 0, ty: 0 }
@@ -387,28 +389,37 @@ export function createGalaxy(canvas: HTMLCanvasElement, { reduce, mobile }: Opti
     pointer.tx = (e.clientX / window.innerWidth - 0.5) * 2
     pointer.ty = -(e.clientY / window.innerHeight - 0.5) * 2
   }
+  // Nothing renders until every shader has compiled (off the main thread)
+  let started = false
+  let live = true
   const onVisibility = () => {
     cancelAnimationFrame(raf)
-    if (!document.hidden && !reduce) {
+    if (started && !document.hidden && !reduce) {
       last = performance.now()
       raf = requestAnimationFrame(loop)
     }
   }
   const onResize = () => {
     resize()
-    if (reduce) render(performance.now())
+    if (reduce && started) render(performance.now())
   }
-  const onScroll = () => reduce && ((progress = scrollProgress()), render(performance.now()))
+  const onScroll = () => reduce && started && ((progress = scrollProgress()), render(performance.now()))
 
   resize()
   window.addEventListener("resize", onResize)
   window.addEventListener("scroll", onScroll, { passive: true })
   window.addEventListener("pointermove", onPointer, { passive: true })
   document.addEventListener("visibilitychange", onVisibility)
-  if (reduce) render(performance.now())
-  else raf = requestAnimationFrame(loop)
+  // Direct3D's shader compiler is slow: compile everything in the background, then start drawing
+  const ready = Promise.all([renderer.compileAsync(scene, camera).catch(() => {}), props.ready]).then(() => {
+    if (!live) return
+    started = true
+    if (reduce) render(performance.now())
+    else raf = requestAnimationFrame(loop)
+  })
 
   return {
+    ready,
     arrive: (on) => {
       arriving = on
       // Leaving (a replayed Big Bang): back out to deep space, ready to fly in again
@@ -426,6 +437,7 @@ export function createGalaxy(canvas: HTMLCanvasElement, { reduce, mobile }: Opti
       warpTarget = reduce ? 0 : amount
     },
     dispose: () => {
+      live = false
       cancelAnimationFrame(raf)
       props.dispose()
       window.removeEventListener("resize", onResize)

@@ -2,7 +2,8 @@
 
 Personal portfolio for Karl Adrian Bensi, BSCpE student and full stack developer. The theme is outer space with a light cybersecurity layer:
 
-- **Intro** — the Big Bang: a singularity gathers matter, then a flash and shockwave blast out the first stars. The letters of KARL fly out of the explosion with an RGB split, glitch-decrypt into PORTFOLIO, and stars stream in to assemble a black-and-white dot portrait behind the title. It stays made of stars: they push away from the cursor, get a periodic scan sweep, and scatter as you scroll away.
+- **Loader** — a singularity gathering at the centre of the screen, with real progress, paints before any script runs. Behind it the galaxy, NASA's suit and every heavy shader are prepared (shaders compile off the main thread), so the intro then plays without a stutter.
+- **Intro** — the Big Bang: matter spirals into a singularity, heating as it falls; then a flash, a turbulent fireball that cools from white through yellow, orange and red, a shock front, and debris cooling into embers and violet haze. The letters of KARL fly out of the explosion with an RGB split, glitch-decrypt into PORTFOLIO, and stars stream in to assemble a black-and-white dot portrait behind the title. It stays made of stars: they push away from the cursor, get a periodic scan sweep, and scatter as you scroll away.
 - **Galaxy** — a real-time Three.js spiral galaxy (GPU-animated, differential rotation, nebula clouds, a radar pulse) sits behind the page. The camera follows a path as you scroll and drifts with the mouse; it dims behind each section so content leads.
 - **Backdrop life** — an astronaut in NASA's EVA suit drifts beside each section on a glowing data tether. Grab him with the mouse and throw him (he tumbles, then the tether reels him back), tap him on a phone to send him spinning; in the Projects voyage he floats in the open corner beside each planet, clear of the project details. Around him: Hubble-palette gas clouds, stars with diffraction spikes, asteroids, a satellite, shooting stars and drifting dust, kept to the open edges so the text stays readable.
 - **Navigation** — nav links jump through hyperspace instead of scrolling past every section, and "Back to orbit" blows the page up in a supernova and replays the Big Bang.
@@ -48,8 +49,10 @@ Name the repository `En1gM-a.github.io` to serve the site at https://en1gm-a.git
 
 | Path | What it does |
 | --- | --- |
-| `src/hooks/useIntro.ts` | Intro timeline (waits for fonts, then runs the beats), skip and reduced-motion handling |
-| `src/components/BigBang.tsx` | The opening canvas: matter spiralling into the singularity, then the explosion of stars |
+| `src/boot.ts`, `index.html` | The loader: what the first load waits for (with a cap), its progress, and the hand-off to the intro |
+| `src/hooks/useIntro.ts` | Intro timeline (starts when the loader lets go), skip and reduced-motion handling |
+| `src/components/BigBang.tsx` | The opening's debris: matter spiralling into the singularity, then motes that blast out white-hot and cool to red |
+| `src/components/Plasma.tsx` | The explosion's hot gas in one low-resolution shader: infall swirl, fireball, shock front, afterglow; also the supernova |
 | `src/components/Hero.tsx` | The intro stage, the PORTFOLIO title and the hero layout |
 | `src/components/ParticlePortrait.tsx` | The halftone star portrait: fly-in, cursor repel, scan sweep, scatter on scroll |
 | `src/three/voyage.ts` | The Projects voyage: planets, nebulae and galaxies per destination, the astronaut beside each planet, warp streaks, camera route |

@@ -76,8 +76,11 @@ const cloudFragment = /* glsl */ `
 
 const rgb = (hex: number) => new THREE.Vector3(((hex >> 16) & 255) / 255, ((hex >> 8) & 255) / 255, (hex & 255) / 255)
 
-/** Bake one texture per palette (one-time GPU pass each) */
-export function bakeNebulae(renderer: THREE.WebGLRenderer, palettes: NebulaPalette[], size: number) {
+/**
+ * Bake one texture per palette (one-time GPU pass each). The noise shader is heavy for Direct3D's
+ * compiler, so it compiles off the main thread first.
+ */
+export async function bakeNebulae(renderer: THREE.WebGLRenderer, palettes: NebulaPalette[], size: number) {
   const scene = new THREE.Scene()
   const cam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1)
   const mat = new THREE.ShaderMaterial({
@@ -93,6 +96,7 @@ export function bakeNebulae(renderer: THREE.WebGLRenderer, palettes: NebulaPalet
   })
   const quad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), mat)
   scene.add(quad)
+  await renderer.compileAsync(scene, cam).catch(() => {})
   const previous = renderer.getRenderTarget()
   const targets = palettes.map(([gas, dust, deep, rim], i) => {
     const rt = new THREE.WebGLRenderTarget(size, size)

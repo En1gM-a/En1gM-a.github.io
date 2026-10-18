@@ -1,14 +1,26 @@
-import { useEffect, useRef } from "react"
+import { useEffect, useRef, useState } from "react"
 import { motion } from "motion/react"
 import { BigBang } from "./BigBang"
+import { Plasma } from "./Plasma"
 
-const BLACKOUT_AT = 1050 // ms: the screen is fully dark, safe to jump to the top and restart
-const DONE_AT = 1550
+const COLLAPSE = 220 // ms: the star at the link contracts and brightens before it blows
+const BLACKOUT_AT = COLLAPSE + 1250 // ms: the screen is dark, safe to jump to the top and restart
+const DONE_AT = BLACKOUT_AT + 500
+
+/** The blast hits like a camera knock: the page and the explosion jolt, then settle */
+function shake(extra: (HTMLElement | null)[]) {
+  const xs = [0, -9, 8, -6, 4, -2, 0]
+  const ys = [0, 6, -7, 5, -3, 1, 0]
+  const frames = xs.map((x, i) => ({ transform: `translate(${x}px, ${ys[i]}px)` }))
+  const targets = [...document.querySelectorAll<HTMLElement>("main, footer"), ...extra]
+  for (const el of targets) el?.animate(frames, { duration: 560, easing: "cubic-bezier(0.2, 0.7, 0.3, 1)" })
+}
 
 /**
- * "Back to orbit": the page goes supernova from the point that was clicked —
- * a swelling white blast, debris and shockwaves — then fades to the void, where
- * the Big Bang replays.
+ * "Back to orbit": the page goes supernova from the point that was clicked.
+ * The core collapses and flares, then the blast: a white-hot fireball with
+ * filaments of debris, a shock front, embers cooling from white to red; the
+ * screen fades to the void, where the Big Bang replays.
  */
 export function Supernova({
   origin,
@@ -21,18 +33,22 @@ export function Supernova({
 }) {
   const handlers = useRef({ onBlackout, onDone })
   handlers.current = { onBlackout, onDone }
+  const stage = useRef<HTMLDivElement>(null)
+  const [blast, setBlast] = useState(false)
 
   useEffect(() => {
-    const a = window.setTimeout(() => handlers.current.onBlackout(), BLACKOUT_AT)
-    const b = window.setTimeout(() => handlers.current.onDone(), DONE_AT)
+    const a = window.setTimeout(() => {
+      setBlast(true)
+      shake([stage.current])
+    }, COLLAPSE)
+    const b = window.setTimeout(() => handlers.current.onBlackout(), BLACKOUT_AT)
+    const c = window.setTimeout(() => handlers.current.onDone(), DONE_AT)
     return () => {
       window.clearTimeout(a)
       window.clearTimeout(b)
+      window.clearTimeout(c)
     }
   }, [])
-
-  // Far enough to cover the screen from any corner
-  const reach = Math.hypot(window.innerWidth, window.innerHeight) * 2.2
 
   return (
     <motion.div
@@ -42,38 +58,17 @@ export function Supernova({
       animate={{ opacity: [1, 1, 0] }}
       transition={{ duration: DONE_AT / 1000, times: [0, BLACKOUT_AT / DONE_AT, 1], ease: "easeOut" }}
     >
-      <BigBang bang origin={origin} infall={false} />
-
-      {[
-        ["border-white/80", 0.9, 0],
-        ["border-cyan/70", 1.2, 0.06],
-        ["border-violet/60", 1.5, 0.14],
-      ].map(([cls, duration, delay]) => (
-        <motion.span
-          key={String(cls)}
-          className={`absolute size-10 rounded-full border-2 ${cls}`}
-          style={{ left: origin.x - 20, top: origin.y - 20 }}
-          initial={{ scale: 0, opacity: 0.9 }}
-          animate={{ scale: 60, opacity: 0 }}
-          transition={{ duration: Number(duration), delay: Number(delay), ease: [0.16, 1, 0.3, 1] }}
-        />
-      ))}
-
-      {/* The blast swells out of the button, accelerating, until it swallows the page */}
-      <motion.span
-        className="absolute size-10 rounded-full bg-[radial-gradient(circle,#ffffff_0%,#e8f9ff_45%,#a5f3fc_75%,rgb(167_139_250/0.6)_100%)] shadow-[0_0_120px_60px_rgba(200,240,255,0.7)]"
-        style={{ left: origin.x - 20, top: origin.y - 20 }}
-        initial={{ scale: 0 }}
-        animate={{ scale: reach / 40 }}
-        transition={{ duration: 0.62, delay: 0.08, ease: [0.7, 0, 0.84, 0] }}
-      />
+      <div ref={stage} className="absolute inset-0">
+        <Plasma bang={blast} origin={origin} kind="supernova" />
+        <BigBang bang={blast} origin={origin} infall={false} />
+      </div>
 
       {/* Fade to the void before the restart */}
       <motion.div
         className="absolute inset-0 bg-void"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        transition={{ delay: 0.62, duration: 0.38, ease: "easeIn" }}
+        transition={{ delay: (COLLAPSE + 850) / 1000, duration: 0.4, ease: "easeIn" }}
       />
     </motion.div>
   )

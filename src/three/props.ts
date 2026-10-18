@@ -12,12 +12,14 @@ import { bakeNebulae, nebulaMaterial, quadVertex } from "./nebula"
  * piece keeps to the open side of the layout while the galaxy turns behind it.
  */
 export type Props = {
+  /** The gas clouds are baked */
+  ready: Promise<void>
   /** arrive: 0..1 eased fly-in of the camera; the props come in with it */
   update: (dt: number, arrive: number) => void
   dispose: () => void
 }
 
-type Opts = { mobile: boolean; reduce: boolean; invalidate?: () => void }
+type Opts = { mobile: boolean; reduce: boolean; invalidate?: () => void; onSuit?: () => void }
 
 // Astronaut placement per section: [x, y] as fractions of the half-viewport, depth in scene units
 type Anchor = [number, number, number]
@@ -203,7 +205,7 @@ export function createProps(
   renderer: THREE.WebGLRenderer,
   scene: THREE.Scene,
   camera: THREE.PerspectiveCamera,
-  { mobile, reduce, invalidate }: Opts,
+  { mobile, reduce, invalidate, onSuit }: Opts,
 ): Props {
   const env = spaceEnvironment(renderer)
   scene.environment = env
@@ -252,18 +254,24 @@ export function createProps(
         { x: 0.95, y: 1.85, size: 1.35, tint: 1, alpha: 0.85 }, // contact, right
         { x: -0.98, y: 2.3, size: 1.15, tint: 2, alpha: 0.6 }, // contact, bottom left
       ]
-  const baked = bakeNebulae(
+  let baked: THREE.WebGLRenderTarget[] = []
+  const ready = bakeNebulae(
     renderer,
     [
       [0x1f7f8a, 0xe39445, 0x6e3218, 0xffd7a0], // pillars: teal gas, amber and rust dust
       [0x3157c8, 0xe0609e, 0x5b2a6e, 0xffe2f2], // cluster: blue gas, pink and violet dust
       [0x22a3b6, 0xf2b24c, 0x5a2b12, 0xfff0c8], // gold: cyan gas, gold dust
     ],
-    mobile ? 512 : 1024,
-  )
+    mobile ? 512 : 768,
+  ).then((targets) => {
+    baked = targets
+    for (const c of clouds) c.mat.uniforms.uMap.value = targets[c.tint].texture
+  })
+    // Clouds are decoration: if the bake fails, the galaxy still starts
+    .catch(() => {})
   const CLOUD_DEPTH = 70
   const clouds = cloudSpecs.map((s) => {
-    const mat = nebulaMaterial(baked[s.tint].texture)
+    const mat = nebulaMaterial()
     const m = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), mat)
     m.position.z = -CLOUD_DEPTH
     m.renderOrder = -1
@@ -381,7 +389,14 @@ export function createProps(
   })
   let nextStreak = 2.5
 
-  const astro = createAstronaut({ shadows, onReady: invalidate })
+  const astro = createAstronaut({
+    shadows,
+    warm: (suit) => renderer.compileAsync(suit, camera, scene),
+    onReady: () => {
+      invalidate?.()
+      onSuit?.()
+    },
+  })
   rig.add(astro.root)
 
   // Section stops: the scroll position at which each anchor applies
@@ -504,6 +519,7 @@ export function createProps(
   let loadedAt = -1
 
   return {
+    ready,
     update: (dt, arrive) => {
       time += dt
       const tan = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2))
