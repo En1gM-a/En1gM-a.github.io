@@ -46,7 +46,8 @@ export function Contact() {
                 className="flex min-h-12 min-w-0 items-center gap-3 rounded-full bg-ink px-6 font-semibold text-void shadow-[0_0_40px_rgba(103,232,249,0.25)] transition-[opacity,box-shadow] hover:shadow-[0_0_60px_rgba(103,232,249,0.45)]"
               >
                 <MailIcon className="shrink-0" />
-                <span className="truncate">{profile.email}</span>
+                <span className="truncate max-sm:hidden">{profile.email}</span>
+                <span className="sm:hidden">Email me</span>
               </a>
             </Magnetic>
             <button
@@ -71,6 +72,7 @@ export function Contact() {
             <span role="status" className="sr-only">
               {copied ? "Email address copied to clipboard" : ""}
             </span>
+            <p className="font-mono text-[13px] break-all text-dim sm:hidden">{profile.email}</p>
           </div>
 
           <div className="mt-8 flex flex-wrap gap-3 border-t border-line pt-6">

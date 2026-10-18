@@ -265,7 +265,8 @@ function Voyage({ wide }: { wide: boolean }) {
   useEffect(() => {
     const update = () => {
       const inside = entryRaw.get() * (1 - exit.get())
-      galaxyBus.dim.set(1 - 0.7 * inside)
+      // The voyage has its own sky; the backdrop fades out so its frozen frame never shows through
+      galaxyBus.dim.set(1 - inside)
       // Only one 3D scene renders at a time once the voyage fills the screen
       galaxyBus.pause(inside > 0.97)
     }

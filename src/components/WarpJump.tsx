@@ -11,7 +11,9 @@ type Jump = { id: string; label: string }
 function arriveAt(id: string) {
   const target = document.getElementById(id)
   if (!target) return
-  target.scrollIntoView({ behavior: "instant", block: "start" })
+  // Scroll the page itself (scrollIntoView can line up against the visual viewport after a tap on phones)
+  const margin = parseFloat(getComputedStyle(target).scrollMarginTop) || 0
+  window.scrollTo({ top: target.getBoundingClientRect().top + window.scrollY - margin, behavior: "instant" })
   if (!target.hasAttribute("tabindex")) target.setAttribute("tabindex", "-1")
   target.focus({ preventScroll: true })
   history.pushState(null, "", `#${id}`)

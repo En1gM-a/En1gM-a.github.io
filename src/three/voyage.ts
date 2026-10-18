@@ -1,6 +1,8 @@
 import * as THREE from "three"
 import { createAstronaut } from "./astronaut"
 import { spaceEnvironment } from "./env"
+import { bakeNebulae, nebulaMaterial } from "./nebula"
+import { createPlanetBaker, createPlanetLook, type PlanetLook } from "./planets"
 
 export type Palette = {
   /** Deep base, mid tone, band highlight, atmosphere glow */
@@ -21,79 +23,6 @@ export type Voyage = { dispose: () => void }
 const SPACING = 70 // distance between destinations along the route
 const SIDE_X = 15 // how far each planet sits off the route
 
-const planetVertex = /* glsl */ `
-  varying vec3 vNormalV;
-  varying vec3 vPos;
-  varying vec3 vViewDir;
-  void main() {
-    vPos = position;
-    vNormalV = normalize(normalMatrix * normal);
-    vec4 mv = modelViewMatrix * vec4(position, 1.0);
-    vViewDir = normalize(-mv.xyz);
-    gl_Position = projectionMatrix * mv;
-  }
-`
-
-const planetFragment = /* glsl */ `
-  uniform vec3 uA;
-  uniform vec3 uB;
-  uniform vec3 uC;
-  uniform vec3 uAtmo;
-  uniform vec3 uLight;
-  uniform float uTime;
-  uniform float uSeed;
-  uniform float uBands;
-  varying vec3 vNormalV;
-  varying vec3 vPos;
-  varying vec3 vViewDir;
-
-  float hash(vec3 p) { return fract(sin(dot(p, vec3(127.1, 311.7, 74.7))) * 43758.5453); }
-  float noise(vec3 p) {
-    vec3 i = floor(p);
-    vec3 f = fract(p);
-    f = f * f * (3.0 - 2.0 * f);
-    float n000 = hash(i);
-    float n100 = hash(i + vec3(1.0, 0.0, 0.0));
-    float n010 = hash(i + vec3(0.0, 1.0, 0.0));
-    float n110 = hash(i + vec3(1.0, 1.0, 0.0));
-    float n001 = hash(i + vec3(0.0, 0.0, 1.0));
-    float n101 = hash(i + vec3(1.0, 0.0, 1.0));
-    float n011 = hash(i + vec3(0.0, 1.0, 1.0));
-    float n111 = hash(i + vec3(1.0, 1.0, 1.0));
-    return mix(
-      mix(mix(n000, n100, f.x), mix(n010, n110, f.x), f.y),
-      mix(mix(n001, n101, f.x), mix(n011, n111, f.x), f.y),
-      f.z
-    );
-  }
-  float fbm(vec3 p) {
-    float v = 0.0;
-    float a = 0.5;
-    for (int k = 0; k < OCTAVES; k++) {
-      v += a * noise(p);
-      p *= 2.03;
-      a *= 0.5;
-    }
-    return v;
-  }
-
-  void main() {
-    vec3 p = normalize(vPos);
-    float n = fbm(p * 2.4 + vec3(uSeed) + vec3(uTime * 0.015, 0.0, 0.0));
-    float warpN = fbm(p * 5.0 + n * 1.5 + uSeed);
-    float bands = sin(p.y * uBands + n * 5.0 + warpN * 2.0) * 0.5 + 0.5;
-    vec3 col = mix(uA, uB, smoothstep(0.3, 0.7, n));
-    col = mix(col, uC, smoothstep(0.55, 0.95, bands) * 0.55);
-    // Soft terminator: a lit hemisphere fading into night
-    float light = smoothstep(-0.25, 0.65, dot(vNormalV, uLight));
-    col *= 0.06 + light * 1.1;
-    // Atmosphere: a fresnel rim, brightest on the lit side
-    float rim = pow(1.0 - max(dot(vNormalV, vViewDir), 0.0), 2.6);
-    col += uAtmo * rim * (0.25 + light * 0.95);
-    gl_FragColor = vec4(col, 1.0);
-  }
-`
-
 const ringFragment = /* glsl */ `
   uniform vec3 uColor;
   uniform float uInner;
@@ -103,7 +32,7 @@ const ringFragment = /* glsl */ `
   void main() {
     float r = (length(vPos.xy) - uInner) / (uOuter - uInner);
     float bands = 0.55 + 0.45 * sin(r * 46.0) * sin(r * 13.0 + 1.3);
-    float edge = smoothstep(0.0, 0.08, r) * smoothstep(1.0, 0.85, r);
+    float edge = smoothstep(0.0, 0.08, r) * (1.0 - smoothstep(0.85, 1.0, r));
     float alpha = bands * edge * 0.55;
     if (uDashed > 0.5) {
       float ang = atan(vPos.y, vPos.x);
@@ -134,10 +63,11 @@ const pointsVertex = /* glsl */ `
 `
 
 const pointsFragment = /* glsl */ `
+  uniform float uOpacity;
   varying vec3 vColor;
   void main() {
     float d = distance(gl_PointCoord, vec2(0.5));
-    float s = pow(max(0.0, 1.0 - d * 2.0), 2.4);
+    float s = pow(max(0.0, 1.0 - d * 2.0), 2.4) * uOpacity;
     gl_FragColor = vec4(vColor * s, s);
   }
 `
@@ -217,7 +147,7 @@ function miniGalaxy(count: number, inner: THREE.Color, outer: THREE.Color, uSize
     transparent: true,
     depthWrite: false,
     blending: THREE.AdditiveBlending,
-    uniforms: { uSize: { value: uSize } },
+    uniforms: { uSize: { value: uSize }, uOpacity: { value: 1 } },
   })
   return new THREE.Points(geo, mat)
 }
@@ -244,7 +174,7 @@ export function createVoyage(
   } catch {
     return null
   }
-  const dpr = Math.min(window.devicePixelRatio || 1, mobile ? 1.25 : 1.75)
+  const dpr = Math.min(window.devicePixelRatio || 1, mobile ? 1.6 : 1.75)
   renderer.setPixelRatio(dpr)
   renderer.setClearColor(0x000000, 0)
   renderer.toneMapping = THREE.ACESFilmicToneMapping
@@ -253,9 +183,16 @@ export function createVoyage(
   const camera = new THREE.PerspectiveCamera(48, 1, 0.1, 900)
   const n = palettes.length
   const glow = glowTexture()
-  const planets: { mesh: THREE.Mesh; spin: number; light: THREE.Vector3 }[] = []
-  const materials: THREE.ShaderMaterial[] = []
+  const planets: { mesh: THREE.Mesh; spin: number; light: THREE.Vector3; atmo: THREE.Color }[] = []
+  const looks: PlanetLook[] = []
   const galaxies: THREE.Points[] = []
+  const nebulae: { mesh: THREE.Mesh; mat: THREE.ShaderMaterial }[] = []
+  // Where a point sits on screen from destination i's parking spot (wide layout): sx, sy in -1..1, D deep
+  const tanH = Math.tan(THREE.MathUtils.degToRad(24))
+  const fromStation = (i: number, sx: number, sy: number, D: number) => {
+    const side = i % 2 === 0 ? 1 : -1
+    return new THREE.Vector3(-side * 2.5 + sx * D * tanH * 1.6, 1.2 + sy * D * tanH, -i * SPACING + 33 - D)
+  }
 
   palettes.forEach((pal, i) => {
     const side = i % 2 === 0 ? 1 : -1
@@ -263,29 +200,17 @@ export function createVoyage(
     const radius = 9.5 + (i % 3) * 0.9
     const center = tall ? new THREE.Vector3(side * 3.5, 7, z) : new THREE.Vector3(side * SIDE_X, i % 2 ? 1.5 : -1.2, z)
 
+    // Lit from the route's side, so the bright limb faces the content
     const light = new THREE.Vector3(-side * 0.65, 0.42, 0.62).normalize()
-    const mat = new THREE.ShaderMaterial({
-      vertexShader: planetVertex,
-      fragmentShader: planetFragment,
-      defines: { OCTAVES: mobile ? 3 : 5 },
-      uniforms: {
-        uA: { value: new THREE.Color(pal.a) },
-        uB: { value: new THREE.Color(pal.b) },
-        uC: { value: new THREE.Color(pal.c) },
-        uAtmo: { value: new THREE.Color(pal.atmo) },
-        // Lit from the route's side, so the bright limb faces the content
-        uLight: { value: light },
-        uTime: { value: 0 },
-        uSeed: { value: i * 7.31 },
-        uBands: { value: 6 + (i % 3) * 4 },
-      },
-    })
-    materials.push(mat)
-    const mesh = new THREE.Mesh(new THREE.SphereGeometry(radius, mobile ? 64 : 96, mobile ? 40 : 64), mat)
+    const look = createPlanetLook(pal, i, light)
+    looks.push(look)
+    const segs: [number, number] = mobile ? [80, 56] : [128, 96]
+    const mesh = new THREE.Mesh(new THREE.SphereGeometry(radius, ...segs), look.surface)
     mesh.position.copy(center)
     mesh.rotation.z = (side * 0.35) / (1 + (i % 2))
     scene.add(mesh)
-    planets.push({ mesh, spin: 0.04 + (i % 3) * 0.015, light })
+    if (look.clouds) mesh.add(new THREE.Mesh(new THREE.SphereGeometry(radius * 1.012, ...segs), look.clouds))
+    planets.push({ mesh, spin: 0.04 + (i % 3) * 0.015, light, atmo: new THREE.Color(pal.atmo) })
 
     // Atmospheric halo behind the disc
     const halo = new THREE.Sprite(
@@ -320,7 +245,11 @@ export function createVoyage(
 
     // This destination's own galaxy and nebula, hanging in the sky beyond the planet
     const g = miniGalaxy(mobile ? 2200 : 6000, new THREE.Color(pal.c), new THREE.Color(pal.atmo), 220 * dpr)
-    g.position.set(-side * 26, 12, z - 80)
+    if (tall) g.position.set(-side * 26, 12, z - 80)
+    else {
+      g.position.copy(fromStation(i, -side * 0.12, 0.6, 120))
+      g.scale.setScalar(1.5)
+    }
     g.rotation.set(0.9, 0.3 * side, 0.4)
     scene.add(g)
     galaxies.push(g)
@@ -331,6 +260,16 @@ export function createVoyage(
     neb.position.set(-side * 12, 4, z - 60)
     neb.scale.setScalar(110)
     scene.add(neb)
+
+    if (!tall) {
+      const mat = nebulaMaterial()
+      const mesh = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), mat)
+      mesh.position.copy(fromStation(i, side * 0.45, 0.25, 170))
+      mesh.scale.setScalar(2 * 170 * tanH * 2)
+      mesh.renderOrder = -1
+      scene.add(mesh)
+      nebulae.push({ mesh, mat })
+    }
   })
 
   // Star streaks along the route: dots at rest, long trails at warp
@@ -356,12 +295,57 @@ export function createVoyage(
   // corner above each planet (beside it on phones), clear of the project details
   const env = spaceEnvironment(renderer)
   scene.environment = env
-  const astro = createAstronaut({ tether: false })
+  const astro = createAstronaut({ tether: false, shadows: !mobile })
   scene.add(camera)
   camera.add(astro.root)
-  const sun = new THREE.DirectionalLight(0xfff3e6, 2.6)
-  scene.add(sun, sun.target, new THREE.HemisphereLight(0x6fa8c8, 0x3a2414, 0.6))
+  const sun = new THREE.DirectionalLight(0xfff3e6, 3.2)
+  if (!mobile) {
+    renderer.shadowMap.enabled = true
+    sun.castShadow = true
+    sun.shadow.mapSize.set(1024, 1024)
+    const sc = sun.shadow.camera
+    sc.left = -1.7
+    sc.right = 1.7
+    sc.top = 1.7
+    sc.bottom = -1.7
+    sc.near = 1
+    sc.far = 50
+    sun.shadow.bias = -0.0005
+    sun.shadow.normalBias = 0.02
+  }
+  const rimLight = new THREE.DirectionalLight(0xffffff, 2.2)
+  scene.add(sun, sun.target, rimLight, rimLight.target, new THREE.HemisphereLight(0x6fa8c8, 0x3a2414, 0.35))
   const astroWorld = new THREE.Vector3()
+  const rimDir = new THREE.Vector3()
+
+  // Bake the planet surfaces and nebulae once the page has settled, one per idle slot; if the voyage
+  // comes into view first, finish them at once so the planets never show their placeholder
+  const baker = createPlanetBaker(renderer, { mobile })
+  const nebulaPalettes = palettes.map((pal) => {
+    const h = (c: string) => parseInt(c.slice(1), 16)
+    return [h(pal.atmo), h(pal.c), h(pal.b), h(pal.c)] as [number, number, number, number]
+  })
+  let nebulaTargets: THREE.WebGLRenderTarget[] = []
+  const jobs: (() => void)[] = [
+    ...palettes.map((pal, i) => () => baker.bake(looks[i], pal, i)),
+    () => {
+      if (!nebulae.length) return
+      nebulaTargets = bakeNebulae(renderer, nebulaPalettes, 768)
+      nebulae.forEach((nb, i) => (nb.mat.uniforms.uMap.value = nebulaTargets[i].texture))
+    },
+  ]
+  let bakeTimer = 0
+  const bakeNext = () => {
+    jobs.shift()?.()
+    if (jobs.length) bakeTimer = window.setTimeout(bakeNext, 90)
+  }
+  const flushBakes = () => {
+    window.clearTimeout(bakeTimer)
+    while (jobs.length) jobs.shift()?.()
+  }
+  const startBaking = () => (bakeTimer = window.setTimeout(bakeNext, 2500))
+  if (document.readyState === "complete") startBaking()
+  else window.addEventListener("load", startBaking, { once: true })
   const sideOf = (i: number) => (i % 2 === 0 ? 1 : -1)
 
   // Camera stations: parked up the route from each planet, looking straight ahead,
@@ -435,6 +419,16 @@ export function createVoyage(
     camera.updateProjectionMatrix()
 
     for (const pl of planets) pl.mesh.rotation.y += dt * pl.spin
+    for (const l of looks) l.setTime(time)
+    // Each destination's galaxy and nebula belong to its stop: they fade as you leave it
+    for (let k = 0; k < n; k++) {
+      const near = 1 - Math.min(1, Math.abs(p - k) / 0.75)
+      ;(galaxies[k].material as THREE.ShaderMaterial).uniforms.uOpacity.value = near
+      if (nebulae[k]) {
+        nebulae[k].mat.uniforms.uOpacity.value = near * 0.9 * entry
+        nebulae[k].mat.uniforms.uTime.value += dt
+      }
+    }
 
     // He crosses to the next planet's side mid-warp, while the project details are hidden,
     // and slides in from the edge as the voyage arrives
@@ -452,8 +446,10 @@ export function createVoyage(
     const at = planets[Math.max(0, Math.min(n - 1, Math.round(p)))]
     astro.root.getWorldPosition(astroWorld)
     sun.target.position.copy(astroWorld)
-    sun.position.copy(astroWorld).addScaledVector(at.light, 60)
-    for (const m of materials) m.uniforms.uTime.value = time
+    sun.position.copy(astroWorld).addScaledVector(at.light, 20)
+    rimLight.target.position.copy(astroWorld)
+    rimLight.position.copy(astroWorld).addScaledVector(rimDir.set(-at.light.x, 0.25, -1).normalize(), 20)
+    rimLight.color.copy(at.atmo)
     for (const g of galaxies) g.rotation.y += dt * 0.03
 
     // Streaks stretch behind the camera's direction of travel as warp builds
@@ -492,6 +488,7 @@ export function createVoyage(
 
   const io = new IntersectionObserver(([e]) => {
     onScreen = e.isIntersecting
+    if (onScreen) flushBakes()
     if (onScreen) play()
     else pause()
   })
@@ -523,6 +520,10 @@ export function createVoyage(
       })
       glow.dispose()
       env.dispose()
+      flushBakes()
+      baker.dispose()
+      nebulaTargets.forEach((t) => t.dispose())
+      looks.forEach((l) => l.dispose())
       renderer.dispose()
     },
   }

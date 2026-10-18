@@ -178,7 +178,11 @@ function MinuteMeetingPreview({ play }: { play: boolean }) {
         <p className="rounded bg-white/10 px-1.5 py-0.5 text-white"># meeting-room</p>
         <p># resources</p>
       </div>
-      <div className="flex flex-1 flex-col justify-end gap-2 overflow-hidden p-3">
+      <div className="flex min-w-0 flex-1 flex-col">
+        <p className="border-b border-black/30 px-3 py-2 text-[10px] font-semibold text-white/85">
+          # meeting-room <span className="font-normal text-white/40">· daily stand-up</span>
+        </p>
+        <div className="flex flex-1 flex-col justify-end gap-2 overflow-hidden p-3">
         <AnimatePresence initial={false}>
           {shown.slice(-5).map((m) => (
             <motion.div key={CHAT.indexOf(m)} layout="position" {...pop} className="flex gap-2">
@@ -218,6 +222,7 @@ function MinuteMeetingPreview({ play }: { play: boolean }) {
             </motion.div>
           ))}
         </AnimatePresence>
+        </div>
       </div>
     </div>
   )
@@ -329,7 +334,7 @@ function ClinicPreview({ play }: { play: boolean }) {
           </li>
         ))}
       </ul>
-      <p className="absolute right-4 bottom-3 left-4 text-center text-[9px] text-white/40">
+      <p className="absolute right-4 bottom-3 left-4 hidden text-center text-[9px] text-white/40 sm:block">
         [↑/↓] navigate · [Enter] select · [TAB] manage · [V] diagnosis
       </p>
     </TerminalFrame>

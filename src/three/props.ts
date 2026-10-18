@@ -2,6 +2,7 @@ import * as THREE from "three"
 import { createAstronaut } from "./astronaut"
 import { spaceEnvironment } from "./env"
 import { galaxyBus } from "./bus"
+import { bakeNebulae, nebulaMaterial, quadVertex } from "./nebula"
 
 /**
  * Life in the backdrop, drawn into the galaxy's scene: an astronaut in NASA's
@@ -38,70 +39,6 @@ const TALL: Anchor[] = [
 const SECTIONS = ["about", "skills", "projects", "contact"]
 const INTERACTIVE = "a,button,input,textarea,select,label,[role='button']"
 
-const quadVertex = /* glsl */ `
-  varying vec2 vUv;
-  void main() {
-    vUv = uv;
-    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-  }
-`
-
-// Hubble-palette gas, baked once per cloud: teal glow, warm dust with dark lanes, bright ionisation rims
-const bakeFragment = /* glsl */ `
-  uniform vec3 uGas;
-  uniform vec3 uDust;
-  uniform vec3 uDeep;
-  uniform vec3 uRim;
-  uniform float uSeed;
-  varying vec2 vUv;
-  float hash(vec2 p) { p = fract(p * vec2(123.34, 456.21)); p += dot(p, p + 45.32); return fract(p.x * p.y); }
-  float noise(vec2 p) {
-    vec2 i = floor(p); vec2 f = fract(p); vec2 u = f * f * (3.0 - 2.0 * f);
-    return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), u.x), mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), u.x), u.y);
-  }
-  float fbm(vec2 p) {
-    float v = 0.0; float a = 0.5;
-    mat2 m = mat2(1.6, 1.2, -1.2, 1.6);
-    for (int i = 0; i < 6; i++) { v += a * noise(p); p = m * p; a *= 0.5; }
-    return v;
-  }
-  void main() {
-    vec2 p = (vUv - 0.5) * 2.0;
-    vec2 q = p * 1.6 + uSeed;
-    vec2 w = vec2(fbm(q), fbm(q + vec2(5.2, 1.3)));
-    vec2 w2 = vec2(fbm(q + 3.0 * w + vec2(1.7, 9.2)), fbm(q + 3.0 * w + vec2(8.3, 2.8)));
-    float n = fbm(q + 3.2 * w2);
-    float edge = smoothstep(1.0, 0.2, length(p * vec2(1.0, 1.1)) + (w.x - 0.5) * 0.6);
-    float gas = smoothstep(0.25, 0.85, fbm(q * 0.7 + w * 1.5 + 4.0));
-    float dust = smoothstep(0.45, 0.78, n);
-    float lit = fbm(q + 3.2 * w2 + vec2(0.03, -0.03));
-    float rim = clamp((n - lit) * 16.0, 0.0, 1.0) * dust;
-    float lanes = smoothstep(0.55, 0.75, fbm(q * 2.4 + w * 2.0 + 11.0));
-    vec3 col = uGas * gas * 0.85 + uGas * pow(gas, 3.0) * 0.45;
-    col = mix(col, mix(uDeep, uDust, n), dust * 0.85);
-    col *= 1.0 - lanes * 0.7;
-    col += uRim * rim * 1.3;
-    gl_FragColor = vec4(col * edge, 1.0);
-  }
-`
-
-// Two slowly counter-rotating samples of the baked cloud, so it seems to billow
-const cloudFragment = /* glsl */ `
-  uniform sampler2D uMap;
-  uniform float uTime;
-  uniform float uOpacity;
-  varying vec2 vUv;
-  vec2 rot(vec2 uv, float a) { uv -= 0.5; float c = cos(a); float s = sin(a); return mat2(c, -s, s, c) * uv + 0.5; }
-  void main() {
-    float a = uTime * 0.012;
-    vec3 c1 = texture2D(uMap, rot(vUv, a)).rgb;
-    vec3 c2 = texture2D(uMap, rot((vUv - 0.5) * 0.94 + 0.5, -a * 1.4 + 0.6)).rgb;
-    vec3 col = mix(c1, c2, 0.3 + 0.2 * sin(uTime * 0.05));
-    col *= smoothstep(0.5, 0.3, length(vUv - 0.5));
-    gl_FragColor = vec4(col, uOpacity);
-  }
-`
-
 // Bright stars with Hubble-style diffraction spikes
 const spikeVertex = /* glsl */ `
   uniform float uTime;
@@ -136,7 +73,7 @@ const spikeFragment = /* glsl */ `
     float core = exp(-r * r * 220.0);
     float halo = exp(-r * r * 28.0) * 0.22;
     float spikes = (exp(-abs(p.x) * 70.0) * exp(-abs(p.y) * 5.5) + exp(-abs(p.y) * 70.0) * exp(-abs(p.x) * 5.5)) * 0.75;
-    float a = (core + halo + spikes) * smoothstep(0.5, 0.32, r);
+    float a = (core + halo + spikes) * (1.0 - smoothstep(0.32, 0.5, r));
     gl_FragColor = vec4(mix(vColor, vec3(1.0), core * 0.8), a * vAlpha);
   }
 `
@@ -188,40 +125,6 @@ const streakFragment = /* glsl */ `
 const rgb = (hex: number) => new THREE.Vector3(((hex >> 16) & 255) / 255, ((hex >> 8) & 255) / 255, (hex & 255) / 255)
 const smooth = (k: number) => k * k * (3 - 2 * k)
 const wrap = (a: number) => Math.atan2(Math.sin(a), Math.cos(a))
-
-function bakeClouds(renderer: THREE.WebGLRenderer, palettes: [number, number, number, number][], size: number) {
-  const scene = new THREE.Scene()
-  const cam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1)
-  const mat = new THREE.ShaderMaterial({
-    vertexShader: quadVertex,
-    fragmentShader: bakeFragment,
-    uniforms: {
-      uGas: { value: new THREE.Vector3() },
-      uDust: { value: new THREE.Vector3() },
-      uDeep: { value: new THREE.Vector3() },
-      uRim: { value: new THREE.Vector3() },
-      uSeed: { value: 0 },
-    },
-  })
-  const quad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), mat)
-  scene.add(quad)
-  const targets = palettes.map(([gas, dust, deep, rim], i) => {
-    const rt = new THREE.WebGLRenderTarget(size, size)
-    mat.uniforms.uGas.value.copy(rgb(gas))
-    mat.uniforms.uDust.value.copy(rgb(dust))
-    mat.uniforms.uDeep.value.copy(rgb(deep))
-    mat.uniforms.uRim.value.copy(rgb(rim))
-    mat.uniforms.uSeed.value = 3.7 + i * 11.3
-    renderer.setRenderTarget(rt)
-    renderer.clear()
-    renderer.render(scene, cam)
-    return rt
-  })
-  renderer.setRenderTarget(null)
-  quad.geometry.dispose()
-  mat.dispose()
-  return targets
-}
 
 function solarPanelTexture() {
   const c = document.createElement("canvas")
@@ -308,12 +211,12 @@ export function createProps(
   camera.add(rig)
 
   // Lights ride with the camera: a white sun, a teal rim from the gas, warm bounce from the dust
-  const hemi = new THREE.HemisphereLight(0x6fa8c8, 0x3a2414, 0.75)
-  const key = new THREE.DirectionalLight(0xfff3e6, 2.8)
+  const hemi = new THREE.HemisphereLight(0x6fa8c8, 0x3a2414, 0.45)
+  const key = new THREE.DirectionalLight(0xfff3e6, 3.2)
   const KEY_DIR = new THREE.Vector3(-5, 6, 4).normalize()
   key.target.position.set(0, 0, -10)
   key.position.copy(KEY_DIR).multiplyScalar(10).add(key.target.position)
-  const rim = new THREE.DirectionalLight(0x4fd1c5, 2.4)
+  const rim = new THREE.DirectionalLight(0x4fd1c5, 2.8)
   rim.position.set(6, 1, -12)
   rim.target.position.set(0, 0, -8)
   const shadows = !mobile
@@ -349,7 +252,7 @@ export function createProps(
         { x: 0.95, y: 1.85, size: 1.35, tint: 1, alpha: 0.85 }, // contact, right
         { x: -0.98, y: 2.3, size: 1.15, tint: 2, alpha: 0.6 }, // contact, bottom left
       ]
-  const baked = bakeClouds(
+  const baked = bakeNebulae(
     renderer,
     [
       [0x1f7f8a, 0xe39445, 0x6e3218, 0xffd7a0], // pillars: teal gas, amber and rust dust
@@ -360,14 +263,7 @@ export function createProps(
   )
   const CLOUD_DEPTH = 70
   const clouds = cloudSpecs.map((s) => {
-    const mat = new THREE.ShaderMaterial({
-      vertexShader: quadVertex,
-      fragmentShader: cloudFragment,
-      transparent: true,
-      depthWrite: false,
-      blending: THREE.AdditiveBlending,
-      uniforms: { uMap: { value: baked[s.tint].texture }, uTime: { value: Math.random() * 100 }, uOpacity: { value: 0 } },
-    })
+    const mat = nebulaMaterial(baked[s.tint].texture)
     const m = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), mat)
     m.position.z = -CLOUD_DEPTH
     m.renderOrder = -1
@@ -415,7 +311,7 @@ export function createProps(
 
   // Asteroids along the edges, tumbling, with scroll parallax by depth
   const rockGeos = [asteroidGeometry(), asteroidGeometry(), asteroidGeometry()]
-  const rockMat = new THREE.MeshStandardMaterial({ color: 0x3a3641, roughness: 1, metalness: 0.05, flatShading: true, envMapIntensity: 0.2 })
+  const rockMat = new THREE.MeshStandardMaterial({ color: 0x3a3641, roughness: 1, metalness: 0.05, flatShading: true, envMapIntensity: 0.2, transparent: true })
   const rockSpecs = [
     { x: 0.93, y: 0.15, d: 9, s: 0.3 },
     { x: 0.66, y: 0.55, d: 16, s: 0.42 },
@@ -424,7 +320,7 @@ export function createProps(
     { x: 0.55, y: 0.02, d: 26, s: 0.5 },
   ].slice(0, mobile ? 3 : 5)
   const rocks = rockSpecs.map((r, i) => {
-    const m = new THREE.Mesh(rockGeos[i % 3], rockMat)
+    const m = new THREE.Mesh(rockGeos[i % 3], rockMat.clone())
     m.scale.setScalar(r.s)
     m.rotation.set(Math.random() * 6, Math.random() * 6, Math.random() * 6)
     rig.add(m)
@@ -614,7 +510,8 @@ export function createProps(
       const aspect = camera.aspect
       const vh = window.innerHeight
       const sy = window.scrollY
-      scrollVel += ((dt > 0 ? (sy - lastScroll) / dt : 0) - scrollVel) * Math.min(1, dt * 6)
+      const jumped = Math.abs(sy - lastScroll) > vh * 2
+      scrollVel = jumped ? 0 : scrollVel + ((dt > 0 ? (sy - lastScroll) / dt : 0) - scrollVel) * Math.min(1, dt * 6)
       lastScroll = sy
       remeasure -= dt
       if (remeasure <= 0 || dt === 0) {
@@ -627,8 +524,10 @@ export function createProps(
       const anchors = aspect < 1 ? TALL : WIDE
       let i = 0
       while (i < stops.length - 2 && sy >= stops[i + 1]) i++
-      const u = Math.min(1, Math.max(0, (sy - stops[i]) / (stops[i + 1] - stops[i])))
-      const k = smooth(Math.min(1, Math.max(0, (u - 0.35) / 0.65)))
+      // He drifts to the next spot over the last stretch before it (at most about a screen), so through
+      // a long section such as the voyage he stays parked where the previous anchor put him
+      const span = Math.min((stops[i + 1] - stops[i]) * 0.65, vh * 1.1)
+      const k = smooth(Math.min(1, Math.max(0, 1 - (stops[i + 1] - sy) / span)))
       const a0 = anchors[i]
       const a1 = anchors[Math.min(anchors.length - 1, i + 1)]
       const d = THREE.MathUtils.lerp(a0[2], a1[2], k)
@@ -646,7 +545,7 @@ export function createProps(
       if (astro.loaded() && loadedAt < 0) loadedAt = time
       const enter = loadedAt < 0 ? 0 : reduce ? 1 : smooth(Math.min(1, (time - loadedAt) / 1.8))
       target.x += (1 - fade * enter) * halfW * 0.9
-      if (!placed || reduce) {
+      if (!placed || reduce || jumped) {
         pos.copy(target)
         placed = true
       } else pos.lerp(target, Math.min(1, dt * 1.6))
@@ -720,6 +619,7 @@ export function createProps(
         const h = tan * r.d
         const fy = (((r.y + (sy / vh) * (1.4 / r.d) + time * 0.004) % 1) + 1) % 1
         r.m.position.set(r.x * h * aspect, (fy * 2 - 1) * h * 1.3, -r.d - (1 - fade) * 30)
+        ;(r.m.material as THREE.MeshStandardMaterial).opacity = 1 - smooth(Math.min(1, Math.max(0, (r.m.position.y / h - 0.6) / 0.25)))
         r.m.rotation.x += r.spin.x * dt
         r.m.rotation.y += r.spin.y * dt
         r.m.rotation.z += r.spin.z * dt
@@ -790,6 +690,7 @@ export function createProps(
       document.documentElement.style.cursor = ""
       document.body.style.userSelect = ""
       baked.forEach((rt) => rt.dispose())
+      rockMat.dispose()
       scene.environment = null
       env.dispose()
       rig.traverse((o) => {

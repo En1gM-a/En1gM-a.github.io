@@ -39,7 +39,7 @@ const tetherFragment = /* glsl */ `
     float pulse = exp(-pow((vU - s) * 28.0, 2.0)) + 0.6 * exp(-pow((vU - fract(s + 0.5)) * 28.0, 2.0));
     pulse = clamp(pulse, 0.0, 1.0);
     vec3 col = mix(vec3(0.62, 0.66, 0.72), vec3(0.45, 0.95, 1.0), pulse);
-    float a = (0.5 + pulse * 0.5) * smoothstep(1.0, 0.55, vU);
+    float a = (0.5 + pulse * 0.5) * (1.0 - smoothstep(0.55, 1.0, vU));
     gl_FragColor = vec4(col * (0.8 + pulse * 0.8), a);
   }
 `
@@ -55,7 +55,8 @@ export function createAstronaut({ tether = true, shadows = false, onReady }: { t
   loadSuit()
     .then((suit) => {
       suit.traverse((o) => {
-        o.castShadow = shadows
+        // The densest small parts (visor, helmet shell) add little to the shadow but a lot to its cost
+        o.castShadow = shadows && !o.userData.heavy
         o.receiveShadow = shadows
       })
       body.add(suit)

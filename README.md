@@ -6,7 +6,7 @@ Personal portfolio for Karl Adrian Bensi, BSCpE student and full stack developer
 - **Galaxy** — a real-time Three.js spiral galaxy (GPU-animated, differential rotation, nebula clouds, a radar pulse) sits behind the page. The camera follows a path as you scroll and drifts with the mouse; it dims behind each section so content leads.
 - **Backdrop life** — an astronaut in NASA's EVA suit drifts beside each section on a glowing data tether. Grab him with the mouse and throw him (he tumbles, then the tether reels him back), tap him on a phone to send him spinning; in the Projects voyage he floats in the open corner beside each planet, clear of the project details. Around him: Hubble-palette gas clouds, stars with diffraction spikes, asteroids, a satellite, shooting stars and drifting dust, kept to the open edges so the text stays readable.
 - **Navigation** — nav links jump through hyperspace instead of scrolling past every section, and "Back to orbit" blows the page up in a supernova and replays the Big Bang.
-- **Sections** — a scroll word-reveal and a crew ID card that tilts and flips (About), an interactive orbital system plus a tech ticker (Skills), a scroll-driven voyage where every project is its own planet and you warp between them (Projects), and a magnetic email button that sends the galaxy into warp (Contact).
+- **Sections** — a scroll word-reveal and a crew ID card that tilts and flips (About), an interactive orbital system plus a tech ticker (Skills), a scroll-driven voyage where every project is its own planet and you warp between them (Projects): living worlds with oceans, drifting clouds and city lights at night, gas giants with storms, zonal winds and lightning, a molten world with glowing rifts, each in its own Hubble-palette nebula with its galaxy overhead, and a magnetic email button that sends the galaxy into warp (Contact).
 
 Built with React, Vite, Tailwind CSS, [Motion](https://motion.dev) and [Three.js](https://threejs.org).
 
@@ -52,7 +52,9 @@ Name the repository `En1gM-a.github.io` to serve the site at https://en1gm-a.git
 | `src/components/BigBang.tsx` | The opening canvas: matter spiralling into the singularity, then the explosion of stars |
 | `src/components/Hero.tsx` | The intro stage, the PORTFOLIO title and the hero layout |
 | `src/components/ParticlePortrait.tsx` | The halftone star portrait: fly-in, cursor repel, scan sweep, scatter on scroll |
-| `src/three/voyage.ts` | The Projects voyage: one shader-lit planet per project, its own galaxy and nebula, warp streaks, camera route |
+| `src/three/voyage.ts` | The Projects voyage: planets, nebulae and galaxies per destination, the astronaut beside each planet, warp streaks, camera route |
+| `src/three/planets.ts` | Planet surfaces and cloud layers, baked once into mipmapped textures (so a frame only reads them), then bump-lit with winds, ocean glints, city lights, lava glow and atmosphere |
+| `src/three/nebula.ts`, `src/three/env.ts` | Baked Hubble-palette gas clouds shared by both scenes, and the sky the metal and visor reflect |
 | `src/components/Projects.tsx` | Scroll choreography for the voyage, and the plain list used with reduced motion |
 | `src/three/galaxy.ts` | The Three.js galaxy scene, camera path, warp and per-section dimming |
 | `src/three/props.ts` | The backdrop's life: astronaut placement and grab/throw physics, gas clouds, spiked stars, asteroids, satellite, shooting stars, dust |

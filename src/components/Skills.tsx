@@ -16,10 +16,10 @@ const TINTS = ["#67e8f9", "#a78bfa", "#f472b6", "#4ade80"]
 function OrbitSystem({ active }: { active: number | null }) {
   const stage = useRef<HTMLDivElement>(null)
   const nodes = useRef<(HTMLSpanElement | null)[]>([])
+  const rings = useRef<(SVGEllipseElement | null)[]>([])
   const reduce = useReducedMotion()
-  const steer = useRef({ speed: 1, tilt: 0.34, targetSpeed: 1, targetTilt: 0.34 })
   const t = useRef(0)
-  // Narrow screens get three chips per orbit; the full lists are in the cards below
+  // Narrow screens get three chips per orbit on tighter, steeper orbits; the full lists are in the cards below
   const [compact, setCompact] = useState(() => typeof window !== "undefined" && window.matchMedia("(max-width: 639px)").matches)
   useEffect(() => {
     const mq = window.matchMedia("(max-width: 639px)")
@@ -27,9 +27,15 @@ function OrbitSystem({ active }: { active: number | null }) {
     mq.addEventListener("change", on)
     return () => mq.removeEventListener("change", on)
   }, [])
+  const baseTilt = compact ? 0.85 : 0.34
+  const reach = compact ? 0.8 : 1
+  const steer = useRef({ speed: 1, tilt: baseTilt, targetSpeed: 1, targetTilt: baseTilt })
+  useEffect(() => {
+    steer.current.targetTilt = baseTilt
+  }, [baseTilt])
 
   const flat = skillGroups.flatMap((g, gi) => {
-    const items = compact ? g.items.slice(0, 3) : g.items
+    const items = compact ? g.items.slice(0, 2) : g.items
     return items.map((item, ii) => ({ item, gi, phase: (ii / items.length) * Math.PI * 2 + gi }))
   })
 
@@ -41,14 +47,21 @@ function OrbitSystem({ active }: { active: number | null }) {
     s.tilt += (s.targetTilt - s.tilt) * 0.06
     if (!reduce) t.current += (delta / 1000) * s.speed
     const half = el.clientWidth / 2
+    // The dotted paths are drawn in pixels, so they match the chips whatever the stage's shape
+    for (let o = 0; o < ORBITS.length; o++) {
+      const ring = rings.current[o]
+      if (!ring) continue
+      ring.setAttribute("rx", (ORBITS[o].r * reach * half).toFixed(1))
+      ring.setAttribute("ry", (ORBITS[o].r * reach * half * s.tilt).toFixed(1))
+    }
     for (let i = 0; i < flat.length; i++) {
       const n = nodes.current[i]
       if (!n) continue
       const { gi, phase } = flat[i]
       const o = ORBITS[gi]
       const a = phase + t.current * o.speed
-      const x = Math.cos(a) * o.r * half
-      const y = Math.sin(a) * o.r * half * s.tilt
+      const x = Math.cos(a) * o.r * reach * half
+      const y = Math.sin(a) * o.r * reach * half * s.tilt
       const depth = (Math.sin(a) + 1) / 2 // 0 = behind the planet, 1 = in front
       const dimmed = active !== null && active !== gi
       n.style.transform = `translate(-50%, -50%) translate(${x}px, ${y}px) scale(${0.72 + depth * 0.36})`
@@ -62,11 +75,11 @@ function OrbitSystem({ active }: { active: number | null }) {
     const px = (e.clientX - r.left) / r.width - 0.5
     const py = (e.clientY - r.top) / r.height - 0.5
     steer.current.targetSpeed = 1 + px * 3.2
-    steer.current.targetTilt = 0.34 + py * 0.3
+    steer.current.targetTilt = baseTilt + py * 0.3
   }
   const onPointerLeave = () => {
     steer.current.targetSpeed = 1
-    steer.current.targetTilt = 0.34
+    steer.current.targetTilt = baseTilt
   }
 
   return (
@@ -77,20 +90,25 @@ function OrbitSystem({ active }: { active: number | null }) {
       onPointerLeave={onPointerLeave}
       className="relative mx-auto h-[clamp(300px,42vw,500px)] w-full max-w-5xl select-none"
     >
+      {/* A darker field behind the system keeps the chips readable over bright parts of the galaxy */}
+      <div className="pointer-events-none absolute -inset-x-[6%] -inset-y-[14%] bg-[radial-gradient(ellipse_closest-side,rgb(3_4_9/0.78),rgb(3_4_9/0.6)_70%,transparent)]" />
+
       {/* Orbit paths */}
-      <svg className="absolute inset-0 h-full w-full overflow-visible" viewBox="-100 -50 200 100" preserveAspectRatio="none">
-        {ORBITS.map((o, i) => (
+      <svg className="absolute inset-0 h-full w-full overflow-visible">
+        {ORBITS.map((_, i) => (
           <ellipse
             key={i}
-            cx="0"
-            cy="0"
-            rx={o.r * 100}
-            ry={o.r * 100 * 0.34}
+            ref={(el) => {
+              rings.current[i] = el
+            }}
+            cx="50%"
+            cy="50%"
+            rx="0"
+            ry="0"
             fill="none"
             stroke={TINTS[i]}
             strokeOpacity={active === null || active === i ? 0.32 : 0.08}
-            strokeDasharray="1.2 1.6"
-            vectorEffect="non-scaling-stroke"
+            strokeDasharray="3 4"
             className="transition-[stroke-opacity] duration-300"
           />
         ))}
@@ -111,7 +129,7 @@ function OrbitSystem({ active }: { active: number | null }) {
           ref={(el) => {
             nodes.current[i] = el
           }}
-          className="chip absolute top-1/2 left-1/2 transition-[border-color] duration-300 will-change-transform"
+          className={`chip absolute top-1/2 left-1/2 bg-void/85 transition-[border-color] duration-300 will-change-transform ${compact ? "px-2 py-1.5 text-[10px]" : ""}`}
           style={{ borderColor: active === gi ? TINTS[gi] : undefined, color: active === gi ? "#eef1f8" : undefined }}
         >
           {item}
@@ -146,6 +164,8 @@ function Marquee({ items, reverse = false }: { items: string[]; reverse?: boolea
 
 export function Skills() {
   const [active, setActive] = useState<number | null>(null)
+  // Steering follows a mouse; on touch screens the group cards light up their orbit instead
+  const [touch] = useState(() => typeof window !== "undefined" && window.matchMedia("(hover: none)").matches)
   const all = skillGroups.flatMap((g) => g.items)
 
   return (
@@ -154,7 +174,7 @@ export function Skills() {
         <SectionHeading title="Skills" note={`${all.length} tools I've shipped with, across ${skillGroups.length} areas: frontend, backend and data, mobile and desktop, and automation.`} />
         <motion.div {...reveal}>
           <OrbitSystem active={active} />
-          <p className="label mt-2 text-center">Move across the system to steer the orbits</p>
+          <p className="label mt-2 text-center">{touch ? "Tap a group below to light up its orbit" : "Move across the system to steer the orbits"}</p>
         </motion.div>
 
         <div className="mt-14 grid gap-4 sm:grid-cols-2 sm:gap-5">
