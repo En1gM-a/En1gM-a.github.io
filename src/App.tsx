@@ -48,7 +48,7 @@ export default function App() {
       <a href="#main" className="skip-link">
         Skip to content
       </a>
-      <GalaxyBackground shown={stage >= STAGE.bang} arrived={stage >= STAGE.settle} />
+      <GalaxyBackground shown={stage >= STAGE.decrypt} arrived={stage >= STAGE.settle} />
       <div
         aria-hidden
         className="pointer-events-none fixed inset-0 -z-10 bg-[radial-gradient(ellipse_60%_40%_at_85%_10%,rgb(167_139_250/0.10),transparent_70%),radial-gradient(ellipse_50%_40%_at_5%_90%,rgb(103_232_249/0.07),transparent_70%)]"

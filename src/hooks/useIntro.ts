@@ -3,18 +3,19 @@ import { useReducedMotion } from "motion/react"
 import { bootReady } from "../boot"
 
 /**
- * Intro timeline, a Big Bang:
- * -1 waiting for fonts · 0 a singularity gathers matter · 1 the Big Bang · 2 KARL flies out of the blast
- * 3 glitch-decrypt to PORTFOLIO · 4 hyperspace arrival + stars assemble the photo · 5 online
+ * Intro timeline, the Big Bang as cosmology tells it:
+ * -1 the loader · 0 a hot seed, quantum flicker · 1 inflation, the universe glows and cools
+ * 2 first light (the fog clears), KARL emerges · 3 the cosmic web forms, glitch-decrypt to PORTFOLIO
+ * 4 the galaxy arrives + stars assemble the photo · 5 online
  */
 export const STAGE = { wait: -1, spark: 0, bang: 1, letters: 2, decrypt: 3, settle: 4, done: 5 } as const
 
 const TIMELINE: [number, number][] = [
   [STAGE.bang, 1150],
-  [STAGE.letters, 1500],
-  [STAGE.decrypt, 2650],
-  [STAGE.settle, 3650],
-  [STAGE.done, 4500],
+  [STAGE.letters, 2000],
+  [STAGE.decrypt, 3000],
+  [STAGE.settle, 3950],
+  [STAGE.done, 4800],
 ]
 
 export function useIntro() {

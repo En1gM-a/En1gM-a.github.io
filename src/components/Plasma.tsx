@@ -1,13 +1,18 @@
 import { useEffect, useRef } from "react"
 
 /**
- * The hot gas of an explosion, drawn by one fragment shader at low resolution
- * (plasma is soft, so it costs little): before the blast, matter swirling into
- * the singularity (or a star contracting before it collapses); then a flash, a
- * turbulent fireball that cools like real hot matter (white, yellow, orange,
- * red), a shock front racing ahead of it, and the cooled gas lingering as
- * violet and teal haze. Without WebGL 2 it draws nothing and the particles
- * carry the moment on their own.
+ * The light of the opening, drawn by one fragment shader at low resolution
+ * (it is soft, so it costs little).
+ *
+ * Big Bang, as cosmology tells it: a hot seed with quantum flicker; inflation
+ * floods the whole screen in a blink (space expanding everywhere, no centre,
+ * no shockwave); the universe glows and cools evenly, white to red, its
+ * ripples stretching as space expands; then the fog clears and leaves the
+ * afterglow, the cosmic microwave background.
+ *
+ * Supernova, as telescopes see one: a star flaring with diffraction spikes,
+ * then a thin shell of ejecta torn into filaments around a blue inner glow.
+ * Without WebGL 2 it draws nothing and the particles carry the moment.
  */
 
 const vertex = /* glsl */ `#version 300 es
@@ -53,42 +58,63 @@ void main() {
   vec2 dir = p / max(r, 0.0001);
   vec3 col = vec3(0.0);
 
-  if (uT < 0.0) {
-    float g = clamp(uPre / (uKind < 0.5 ? 1.15 : 0.22), 0.0, 1.0);
-    if (uKind < 0.5) {
-      // Matter spiralling in: a ring of gas tightening around the singularity, heating as it falls
-      float s = 4.0 * log(r + 0.001) - uPre * 3.0;
-      float spiral = fbm(mat2(cos(s), -sin(s), sin(s), cos(s)) * p * 7.0 + 3.0);
-      float ring = exp(-pow((r - 0.04 - 0.3 * (1.0 - g)) * 8.0, 2.0));
-      col = heat(0.3 + 0.55 * g) * ring * spiral * spiral * 1.6 * g;
+  if (uKind < 0.5) {
+    // The Big Bang as cosmology tells it: not a blast into space, but space itself expanding everywhere
+    if (uT < 0.0) {
+      // Before time: one hot seed, quantum fluctuations flickering around it
+      float g = clamp(uPre / 1.15, 0.0, 1.0);
+      float foam = pow(noise(p * 140.0 + vec2(uPre * 17.0, -uPre * 11.0)), 14.0) * 4.0;
+      col = vec3(0.7, 0.85, 1.0) * foam * exp(-r * 7.0) * g;
       col += vec3(0.75, 0.9, 1.0) * (0.00012 / (r * r + 0.0004)) * g;
     } else {
-      // A star contracting and brightening before it collapses
-      col = vec3(0.85, 0.93, 1.0) * exp(-r * r * (1400.0 - 900.0 * g)) * (0.5 + 1.2 * g);
+      float t = uT;
+      // Inflation: the hot region grows exponentially and is past every edge of the screen within a few frames
+      float R = 0.02 * exp(t * 40.0);
+      float filled = 1.0 - smoothstep(R * 0.3, R, r);
+      // Space keeps stretching: the ripples are drawn in co-moving coordinates, so they grow with it
+      float a = 1.0 + t * 1.6;
+      vec2 q = p / a;
+      float ripple = fbm(q * 9.0 + 4.2);
+      // The whole universe cools as it expands, everywhere at once: white, yellow, orange, deep red
+      float temp = 1.25 * exp(-t * 1.5);
+      float fog = 1.0 - smoothstep(0.95, 1.6, t);
+      col = heat(temp * (0.92 + 0.16 * ripple)) * (0.8 + 0.4 * ripple) * filled * fog;
+      // The fog clears (recombination) and leaves the afterglow: the cosmic microwave background,
+      // a faint mottled map in the colours of the Planck sky maps
+      // (cold spots deep blue, the mean a pale cream, hot spots orange to red)
+      float m = fbm(q * 48.0 + 3.7) * 0.75 + fbm(q * 12.0 + 1.1) * 0.25;
+      vec3 cmb = mix(vec3(0.02, 0.07, 0.42), vec3(0.3, 0.58, 0.95), smoothstep(0.32, 0.46, m));
+      cmb = mix(cmb, vec3(0.96, 0.9, 0.74), smoothstep(0.46, 0.5, m));
+      cmb = mix(cmb, vec3(1.0, 0.48, 0.1), smoothstep(0.5, 0.58, m));
+      cmb = mix(cmb, vec3(0.7, 0.08, 0.04), smoothstep(0.6, 0.7, m));
+      col += cmb * smoothstep(1.05, 1.45, t) * (1.0 - smoothstep(1.9, 2.4, t)) * 0.3;
+      // The very first instant lights the whole view at once: there is no outside for it to blast into
+      col += vec3(1.0, 0.98, 0.95) * exp(-t * 12.0) * 0.5;
     }
   } else {
-    float t = uT;
-    float sn = step(0.5, uKind);
-    // Fireball: grows fast then slows, with a turbulent edge
-    float R = uReach * (1.0 - exp(-t * 1.9));
-    float n = fbm(dir * 2.5 + vec2(7.0, r * 3.0 - t * 1.5) + p * 4.0);
-    float edge = R * (0.82 + 0.36 * n) + 0.001;
-    float body = 1.0 - smoothstep(edge * 0.55, edge, r);
-    float rim = exp(-pow((r - edge * 0.92) / (0.05 + 0.12 * t), 2.0));
-    float temp = 1.2 * exp(-t * 1.25) * (1.0 - 0.45 * r / edge);
-    float turb = 0.55 + 0.8 * fbm(p * 5.0 - vec2(t * 0.7, t * 0.4));
-    col = heat(temp) * (body * 0.75 + rim * 0.9) * turb;
-    // Supernova: filaments of debris shot out through the shell
-    float rays = pow(fbm(dir * 9.0 + vec2(0.0, r * 1.5 - t * 2.0)), 3.0) * 2.4;
-    col += heat(temp * 0.9 + 0.2) * rays * body * sn;
-    // Shock front racing ahead of the fireball
-    float S = uReach * 1.4 * (1.0 - exp(-t * 2.6));
-    col += vec3(0.85, 0.94, 1.0) * exp(-pow((r - S) * 34.0, 2.0)) * exp(-t * 1.3) * 1.6;
-    // The cooled cloud lingers as violet and teal gas
-    float haze = fbm(p * 2.2 + vec2(t * 0.15, 0.0)) * smoothstep(0.4, 1.4, t) * exp(-max(t - 1.4, 0.0) * 1.1);
-    col += mix(vec3(0.42, 0.25, 0.85), vec3(0.15, 0.75, 0.85), fbm(p * 3.0 + 9.0)) * haze * 0.55 * (1.0 - 0.5 * smoothstep(0.0, edge * 1.1, r));
-    // The first instant overexposes everything
-    col += vec3(1.0, 0.98, 0.95) * exp(-t * 6.5) * (0.5 + 0.6 / (r * 6.0 + 0.4));
+    // A supernova really is an explosion, seen the way telescopes see one
+    if (uT < 0.0) {
+      // The star flickers and contracts as its core gives way
+      float g = clamp(uPre / 0.22, 0.0, 1.0);
+      col = vec3(0.85, 0.93, 1.0) * exp(-r * r * (1400.0 - 900.0 * g)) * (0.5 + 1.2 * g);
+    } else {
+      float t = uT;
+      // One star outshines everything, flaring with diffraction spikes
+      float flare = exp(-t * 2.6);
+      float core = 0.0008 / (r * r + 0.0001);
+      float spikes = exp(-abs(p.y) * 240.0) * exp(-abs(p.x) * 3.0) + exp(-abs(p.x) * 240.0) * exp(-abs(p.y) * 3.0);
+      col = vec3(0.86, 0.93, 1.0) * (core * 0.3 + spikes * 1.4) * flare;
+      col += vec3(1.0) * exp(-t * 6.0) * 0.5;
+      // The remnant: a thin shell of ejecta racing out, torn into red and orange filaments
+      float R = uReach * 1.15 * (1.0 - exp(-t * 1.6));
+      float n = fbm(dir * 6.0 + vec2(t * 0.5, 0.0) + p * 3.0);
+      float shell = exp(-pow((r - R * (0.9 + 0.2 * n)) / (0.025 + 0.05 * t), 2.0));
+      float fil = pow(fbm(dir * 14.0 + p * 6.0 - t), 2.5) * 2.0;
+      col += mix(vec3(1.0, 0.45, 0.25), vec3(0.95, 0.28, 0.55), n) * shell * (0.6 + fil) * exp(-t * 0.9);
+      // Inside, the blue glow of the newborn pulsar's wind
+      float inside = (1.0 - smoothstep(R * 0.4, R * 0.95, r)) * exp(-t * 1.2);
+      col += vec3(0.35, 0.55, 1.0) * inside * 0.35 * (0.6 + 0.6 * fbm(p * 5.0 + t));
+    }
   }
   float alpha = clamp(max(col.r, max(col.g, col.b)), 0.0, 1.0);
   o = vec4(min(col, vec3(alpha)), alpha);

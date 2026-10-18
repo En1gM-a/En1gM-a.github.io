@@ -20,7 +20,8 @@ const CLEAN = "0em 0 0 rgba(34,211,238,0), 0em 0 0 rgba(244,114,182,0)"
 
 const LOG: [number, string, string][] = [
   [STAGE.spark, "singularity", "detected"],
-  [STAGE.bang, "big bang", "t = 0"],
+  [STAGE.bang, "inflation", "t = 0"],
+  [STAGE.letters, "first light", "380 kyr"],
   [STAGE.decrypt, "identity", "decrypting"],
   [STAGE.settle, "access", "granted"],
 ]
@@ -43,24 +44,18 @@ function IntroStage({ stage, onSkip }: { stage: number; onSkip: () => void }) {
   }, [])
 
   return (
-    <motion.div
-      className="fixed inset-0 z-40 flex items-center justify-center"
-      onPointerDown={onSkip}
-      // The blast knocks the camera, then it settles
-      animate={banged ? { x: [0, -8, 7, -5, 3, -1, 0], y: [0, 5, -6, 4, -2, 1, 0] } : undefined}
-      transition={{ duration: 0.55, ease: [0.2, 0.7, 0.3, 1] }}
-    >
+    <motion.div className="fixed inset-0 z-40 flex items-center justify-center" onPointerDown={onSkip}>
       <Plasma bang={banged} />
       <BigBang bang={banged} />
 
-      {/* The singularity: unstable, gathering, then gone in the flash */}
+      {/* The singularity: unstable, gathering, then handing over to inflation (no lens spikes: no telescope was there) */}
       <motion.span
         aria-hidden
         className="absolute top-1/2 left-1/2 -mt-[5px] -ml-[5px] size-[10px] rounded-full bg-white shadow-[0_0_14px_4px_rgba(230,248,255,0.95),0_0_60px_18px_rgba(103,232,249,0.45),0_0_120px_40px_rgba(167,139,250,0.25)]"
         initial={{ scale: 0, opacity: 0 }}
         animate={
           banged
-            ? { scale: 46, opacity: 0, transition: { duration: 0.42, ease: "easeOut" } }
+            ? { scale: 6, opacity: 0, transition: { duration: 0.25, ease: "easeIn" } }
             : {
                 scale: [0, 0.8, 0.65, 1.1, 0.85, 1.5],
                 opacity: [0, 1, 0.8, 1, 0.85, 1],
@@ -68,11 +63,7 @@ function IntroStage({ stage, onSkip }: { stage: number; onSkip: () => void }) {
                 transition: { duration: 1.15, times: [0, 0.2, 0.4, 0.6, 0.8, 1], ease: "easeInOut" },
               }
         }
-      >
-        {/* Diffraction spikes */}
-        <span className="absolute top-1/2 left-1/2 h-px w-16 -translate-1/2 bg-gradient-to-r from-transparent via-white/90 to-transparent" />
-        <span className="absolute top-1/2 left-1/2 h-10 w-px -translate-1/2 bg-gradient-to-b from-transparent via-white/80 to-transparent" />
-      </motion.span>
+      />
 
       {stage < STAGE.decrypt && (
         // Same PORTFOLIO-wide box as the decrypting word, so KARL stays put when the glyphs take over

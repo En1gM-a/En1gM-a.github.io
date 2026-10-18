@@ -18,9 +18,9 @@ function shake(extra: (HTMLElement | null)[]) {
 
 /**
  * "Back to orbit": the page goes supernova from the point that was clicked.
- * The core collapses and flares, then the blast: a white-hot fireball with
- * filaments of debris, a shock front, embers cooling from white to red; the
- * screen fades to the void, where the Big Bang replays.
+ * The star's core collapses, it flares brighter than everything around it,
+ * and a shell of ejecta tears outward in filaments while debris cools from
+ * white to red; the screen fades to the void, where the Big Bang replays.
  */
 export function Supernova({
   origin,
@@ -60,7 +60,7 @@ export function Supernova({
     >
       <div ref={stage} className="absolute inset-0">
         <Plasma bang={blast} origin={origin} kind="supernova" />
-        <BigBang bang={blast} origin={origin} infall={false} />
+        <BigBang bang={blast} origin={origin} mode="ejecta" />
       </div>
 
       {/* Fade to the void before the restart */}
