@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { AnimatePresence, motion, useReducedMotion, useScroll, useTransform } from "motion/react"
 import { BigBang } from "./BigBang"
 import { Plasma } from "./Plasma"
@@ -11,10 +11,10 @@ import { profile } from "../data/content"
 const NAME = "KARL"
 const WORD = "PORTFOLIO"
 
-// Each letter is flung out of the blast with its own spin
-const SPINS = [-160, 120, -100, 170]
+// The letters condense out of the fog where they stand, a little out of step, like the first stars
+const DELAYS = [0.08, 0, 0.14, 0.04]
 
-// RGB-split trail the letters carry while they fly, settling to a clean edge
+// RGB split the letters carry as they condense, settling to a clean edge
 const SPLIT = "-0.09em 0 0 rgba(34,211,238,0.85), 0.09em 0 0 rgba(244,114,182,0.85)"
 const CLEAN = "0em 0 0 rgba(34,211,238,0), 0em 0 0 rgba(244,114,182,0)"
 
@@ -27,41 +27,22 @@ const LOG: [number, string, string][] = [
 ]
 
 function IntroStage({ stage, onSkip }: { stage: number; onSkip: () => void }) {
-  const rowRef = useRef<HTMLDivElement>(null)
-  const letterRefs = useRef<(HTMLSpanElement | null)[]>([])
-  const [offsets, setOffsets] = useState<number[]>(NAME.split("").map(() => 0))
   const banged = stage >= STAGE.bang
-
-  // How far each letter sits from the blast at the centre of the PORTFOLIO-wide box
-  useLayoutEffect(() => {
-    const measure = () => {
-      const row = rowRef.current
-      if (!row) return
-      setOffsets(letterRefs.current.map((el) => (el ? row.offsetWidth / 2 - (el.offsetLeft + el.offsetWidth / 2) : 0)))
-    }
-    measure()
-    document.fonts?.ready.then(measure)
-  }, [])
 
   return (
     <motion.div className="fixed inset-0 z-40 flex items-center justify-center" onPointerDown={onSkip}>
       <Plasma bang={banged} />
       <BigBang bang={banged} />
 
-      {/* The singularity: unstable, gathering, then handing over to inflation (no lens spikes: no telescope was there) */}
+      {/* The singularity: a violet point of light gathering calmly, then blooming into the glow that fills everything */}
       <motion.span
         aria-hidden
-        className="absolute top-1/2 left-1/2 -mt-[5px] -ml-[5px] size-[10px] rounded-full bg-white shadow-[0_0_14px_4px_rgba(230,248,255,0.95),0_0_60px_18px_rgba(103,232,249,0.45),0_0_120px_40px_rgba(167,139,250,0.25)]"
+        className="absolute top-1/2 left-1/2 -mt-[5px] -ml-[5px] size-[10px] rounded-full bg-white shadow-[0_0_12px_4px_rgba(214,196,255,0.9),0_0_48px_16px_rgba(150,110,255,0.45),0_0_110px_36px_rgba(110,70,220,0.25)]"
         initial={{ scale: 0, opacity: 0 }}
         animate={
           banged
-            ? { scale: 6, opacity: 0, transition: { duration: 0.25, ease: "easeIn" } }
-            : {
-                scale: [0, 0.8, 0.65, 1.1, 0.85, 1.5],
-                opacity: [0, 1, 0.8, 1, 0.85, 1],
-                x: [0, 0, 1.5, -1.5, 2, -2],
-                transition: { duration: 1.15, times: [0, 0.2, 0.4, 0.6, 0.8, 1], ease: "easeInOut" },
-              }
+            ? { scale: 4, opacity: 0, transition: { duration: 0.22, ease: "easeIn" } }
+            : { scale: [0, 0.7, 1, 1.3], opacity: [0, 0.75, 0.9, 1], transition: { duration: 1.15, times: [0, 0.35, 0.7, 1], ease: "easeInOut" } }
         }
       />
 
@@ -69,36 +50,23 @@ function IntroStage({ stage, onSkip }: { stage: number; onSkip: () => void }) {
         // Same PORTFOLIO-wide box as the decrypting word, so KARL stays put when the glyphs take over
         <div className="display hero-word grid" aria-hidden>
           <span className="invisible col-start-1 row-start-1 whitespace-nowrap">{WORD}</span>
-          <div ref={rowRef} className="col-start-1 row-start-1 flex items-end">
+          <div className="col-start-1 row-start-1 flex items-end">
             {NAME.split("").map((ch, i) => (
               <motion.span
                 key={ch + i}
-                ref={(el) => {
-                  letterRefs.current[i] = el
-                }}
                 className="silver inline-block"
                 initial={{ opacity: 0 }}
                 animate={
                   stage >= STAGE.letters
-                    ? {
-                        opacity: [0, 1],
-                        x: [offsets[i], 0],
-                        y: ["0.1em", "0em"],
-                        rotate: [SPINS[i], 0],
-                        scale: [0.15, 1],
-                        filter: ["blur(12px)", "blur(0px)"],
-                        textShadow: [SPLIT, CLEAN],
-                      }
+                    ? { opacity: [0, 1], scale: [1.18, 1], filter: ["blur(14px)", "blur(0px)"], textShadow: [SPLIT, CLEAN] }
                     : undefined
                 }
                 transition={{
-                  type: "spring",
-                  bounce: 0.32,
-                  visualDuration: 0.6,
-                  delay: i * 0.12,
-                  opacity: { duration: 0.2, delay: i * 0.12 },
-                  textShadow: { duration: 0.9, delay: i * 0.12 + 0.15, ease: "easeOut" },
-                  filter: { duration: 0.5, delay: i * 0.12, ease: "easeOut" },
+                  duration: 0.9,
+                  delay: DELAYS[i],
+                  ease: [0.22, 1, 0.36, 1],
+                  opacity: { duration: 0.5, delay: DELAYS[i] },
+                  textShadow: { duration: 0.9, delay: DELAYS[i] + 0.15, ease: "easeOut" },
                 }}
               >
                 {ch}
@@ -127,7 +95,7 @@ function IntroStage({ stage, onSkip }: { stage: number; onSkip: () => void }) {
       <button
         type="button"
         onClick={onSkip}
-        className="label absolute right-[var(--gutter)] bottom-6 flex min-h-11 items-center gap-2 rounded-full border border-line px-4 text-dim transition-colors hover:border-cyan/50 hover:text-ink"
+        className="label absolute right-[var(--gutter)] bottom-6 flex min-h-11 items-center gap-2 rounded-full border border-line bg-void/70 px-4 text-dim backdrop-blur-sm transition-colors hover:border-cyan/50 hover:text-ink"
       >
         Skip intro <kbd className="rounded border border-line px-1.5 py-0.5 text-[10px]">esc</kbd>
       </button>

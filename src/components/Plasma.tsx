@@ -4,11 +4,12 @@ import { useEffect, useRef } from "react"
  * The light of the opening, drawn by one fragment shader at low resolution
  * (it is soft, so it costs little).
  *
- * Big Bang, as cosmology tells it: a hot seed with quantum flicker; inflation
- * floods the whole screen in a blink (space expanding everywhere, no centre,
- * no shockwave); the universe glows and cools evenly, white to red, its
- * ripples stretching as space expands; then the fog clears and leaves the
- * afterglow, the cosmic microwave background.
+ * Big Bang, after NASA's own visualisation of it, which is not an explosion:
+ * no fireball, no blast front, no fire. A violet point of light blooms into a
+ * cool glow (white heart, cyan, blue rim) that fills everything; the whole
+ * universe then glows evenly as a pale fog whose folds stretch as space
+ * expands, dims as it cools, and thins away until light travels freely and
+ * the first galaxies show through.
  *
  * Supernova, as telescopes see one: a star flaring with diffraction spikes,
  * then a thin shell of ejecta torn into filaments around a blue inner glow.
@@ -40,16 +41,6 @@ float fbm(vec2 p) {
   for (int i = 0; i < 5; i++) { v += a * noise(p); p = p * 2.03 + vec2(1.7, 9.2); a *= 0.5; }
   return v;
 }
-// Colour of hot matter as it cools: blue-white, white, yellow, orange, deep red, dark
-vec3 heat(float k) {
-  k = clamp(k, 0.0, 1.25);
-  vec3 c = mix(vec3(0.0), vec3(0.42, 0.04, 0.1), smoothstep(0.0, 0.25, k));
-  c = mix(c, vec3(1.0, 0.36, 0.08), smoothstep(0.2, 0.5, k));
-  c = mix(c, vec3(1.0, 0.8, 0.38), smoothstep(0.45, 0.75, k));
-  c = mix(c, vec3(1.0, 0.97, 0.92), smoothstep(0.7, 0.95, k));
-  return mix(c, vec3(0.82, 0.9, 1.0), smoothstep(0.95, 1.25, k));
-}
-
 void main() {
   vec2 frag = vec2(gl_FragCoord.x, uRes.y - gl_FragCoord.y);
   vec2 p = (frag - uOrigin) / uRes.y;
@@ -59,37 +50,28 @@ void main() {
   vec3 col = vec3(0.0);
 
   if (uKind < 0.5) {
-    // The Big Bang as cosmology tells it: not a blast into space, but space itself expanding everywhere
     if (uT < 0.0) {
-      // Before time: one hot seed, quantum fluctuations flickering around it
+      // Before: a violet point of light, slowly gathering
       float g = clamp(uPre / 1.15, 0.0, 1.0);
-      float foam = pow(noise(p * 140.0 + vec2(uPre * 17.0, -uPre * 11.0)), 14.0) * 4.0;
-      col = vec3(0.7, 0.85, 1.0) * foam * exp(-r * 7.0) * g;
-      col += vec3(0.75, 0.9, 1.0) * (0.00012 / (r * r + 0.0004)) * g;
+      col = vec3(0.62, 0.46, 1.0) * (0.00005 / (r * r + 0.0002)) * (0.25 + 0.75 * g);
+      col += vec3(0.38, 0.24, 0.8) * exp(-r * 8.0) * 0.14 * g * g;
     } else {
       float t = uT;
-      // Inflation: the hot region grows exponentially and is past every edge of the screen within a few frames
-      float R = 0.02 * exp(t * 40.0);
-      float filled = 1.0 - smoothstep(R * 0.3, R, r);
-      // Space keeps stretching: the ripples are drawn in co-moving coordinates, so they grow with it
-      float a = 1.0 + t * 1.6;
-      vec2 q = p / a;
-      float ripple = fbm(q * 9.0 + 4.2);
-      // The whole universe cools as it expands, everywhere at once: white, yellow, orange, deep red
-      float temp = 1.25 * exp(-t * 1.5);
-      float fog = 1.0 - smoothstep(0.95, 1.6, t);
-      col = heat(temp * (0.92 + 0.16 * ripple)) * (0.8 + 0.4 * ripple) * filled * fog;
-      // The fog clears (recombination) and leaves the afterglow: the cosmic microwave background,
-      // a faint mottled map in the colours of the Planck sky maps
-      // (cold spots deep blue, the mean a pale cream, hot spots orange to red)
-      float m = fbm(q * 48.0 + 3.7) * 0.75 + fbm(q * 12.0 + 1.1) * 0.25;
-      vec3 cmb = mix(vec3(0.02, 0.07, 0.42), vec3(0.3, 0.58, 0.95), smoothstep(0.32, 0.46, m));
-      cmb = mix(cmb, vec3(0.96, 0.9, 0.74), smoothstep(0.46, 0.5, m));
-      cmb = mix(cmb, vec3(1.0, 0.48, 0.1), smoothstep(0.5, 0.58, m));
-      cmb = mix(cmb, vec3(0.7, 0.08, 0.04), smoothstep(0.6, 0.7, m));
-      col += cmb * smoothstep(1.05, 1.45, t) * (1.0 - smoothstep(1.9, 2.4, t)) * 0.3;
-      // The very first instant lights the whole view at once: there is no outside for it to blast into
-      col += vec3(1.0, 0.98, 0.95) * exp(-t * 12.0) * 0.5;
+      // The light blooms (inflation) and is past every edge of the screen within a few frames
+      float R = 0.05 * exp(t * 11.0);
+      float u = r / R;
+      vec3 bloom = mix(vec3(0.93, 0.95, 1.0), vec3(0.48, 0.86, 0.96), smoothstep(0.2, 0.65, u));
+      bloom = mix(bloom, vec3(0.2, 0.36, 0.88), smoothstep(0.6, 1.05, u));
+      bloom *= exp(-u * u * 0.8);
+      // Then the universe glows evenly, everywhere: a pale fog whose soft folds stretch as space expands
+      vec2 q = p / (1.0 + t * 0.6);
+      float folds = fbm(q * 2.4 + vec2(t * 0.12, -t * 0.08) + 3.1);
+      vec3 fog = vec3(0.85, 0.87, 0.91) * (1.0 + (folds - 0.5) * 1.1 * smoothstep(0.25, 0.9, t));
+      col = mix(bloom, fog, smoothstep(0.18, 0.45, t));
+      // It dims as it cools and thins unevenly until it clears: light can finally travel, and galaxies show through
+      float clearing = smoothstep(0.9, 1.75, t);
+      float keep = smoothstep(clearing - 0.3, clearing + 0.05, folds);
+      col *= 0.88 * exp(-max(0.0, t - 0.35) * 1.5) * keep * smoothstep(0.0, 0.05, t);
     }
   } else {
     // A supernova really is an explosion, seen the way telescopes see one
@@ -218,8 +200,8 @@ export function Plasma({
       gl.clearColor(0, 0, 0, 0)
       gl.clear(gl.COLOR_BUFFER_BIT)
       gl.drawArrays(gl.TRIANGLES, 0, 3)
-      // Past the afterglow there is nothing left to draw
-      if (t < 3.4) raf = requestAnimationFrame(frame)
+      // Once the fog has cleared (or the remnant faded) there is nothing left to draw
+      if (t < (kind === "supernova" ? 3.4 : 2)) raf = requestAnimationFrame(frame)
       else gl.clear(gl.COLOR_BUFFER_BIT)
     }
     raf = requestAnimationFrame(frame)

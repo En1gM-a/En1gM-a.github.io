@@ -3,8 +3,11 @@ import { useEffect, useRef } from "react"
 /** A line to draw this frame: from (px, py) to (tx, ty) */
 type Seg = { px: number; py: number; tx: number; ty: number; size: number; alpha: number }
 
-/** Matter in the young universe: a co-moving position, and where gravity will gather it */
-type Grain = Seg & { qx: number; qy: number; gx: number; gy: number; pull: number; node: boolean; seed: number }
+/** A young star or faint galaxy: where it sits in expanding space, when it lights up, how bright it gets */
+type Speck = Seg & { qx: number; qy: number; born: number; peak: number; tone: number; seed: number }
+
+/** A galaxy near enough to show its shape: a soft sprite, tilted and flattened */
+type Galaxy = { qx: number; qy: number; born: number; size: number; tilt: number; flat: number; kind: number; peak: number }
 
 type Mote = Seg & { x: number; y: number; vx: number; vy: number; life: number; heat: number; cool: number }
 
@@ -28,24 +31,37 @@ const HEAT = Array.from({ length: STEPS }, (_, i) => {
   return `rgb(${c0.map((c, n) => Math.round(c + (c1[n] - c) * f)).join(",")})`
 })
 const heatIndex = (k: number) => Math.min(STEPS - 1, Math.max(0, Math.round((k / 1.2) * (STEPS - 1))))
-const GAS = "#8a96f0" // neutral hydrogen after the fog clears
-const STAR = "#f3f6ff" // the first stars, igniting where the web's filaments meet
+// The first stars and faint galaxies: mostly white, some bluer, some warmer
+const TONES = ["#f4f7ff", "#c9d6ff", "#ffe6c4"]
 
 const smooth = (a: number, b: number, v: number) => {
   const t = Math.min(1, Math.max(0, (v - a) / (b - a)))
   return t * t * (3 - 2 * t)
 }
+const gauss = () => (Math.random() + Math.random() + Math.random() - 1.5) / 1.5
+
+/** A soft round glow on a small canvas, to stamp galaxies from */
+function sprite(stops: [number, string][]) {
+  const c = document.createElement("canvas")
+  c.width = c.height = 64
+  const g = c.getContext("2d")
+  if (!g) return c
+  const grad = g.createRadialGradient(32, 32, 0, 32, 32, 32)
+  for (const [at, color] of stops) grad.addColorStop(at, color)
+  g.fillStyle = grad
+  g.fillRect(0, 0, 64, 64)
+  return c
+}
 
 /**
  * The opening's matter, drawn on a 2D canvas over the plasma shader.
  *
- * "cosmos" follows the Big Bang as cosmology tells it: not an explosion from a
- * point but space expanding everywhere at once. Inflation is the plasma
- * shader flooding the view within a few frames; the matter in it appears where
- * it already is (nothing is flung from a centre) and keeps stretching apart,
- * every grain receding from every other; it cools with the universe, goes dark
- * when the fog clears, and gravity gathers it into the filaments and knots of
- * the cosmic web, where the first stars ignite.
+ * "cosmos" follows NASA's own visualisation of the Big Bang, which is not an
+ * explosion: nothing is thrown out from a centre. While the shader's glowing
+ * fog fills the whole view and thins, the first stars and faint galaxies
+ * light up everywhere at once inside it, loosely clumped the way gravity
+ * gathers them, and the fog clears to a deep field of galaxies that keeps
+ * drifting apart as space expands.
  *
  * "ejecta" is a real explosion, for the supernova: debris blasted outward
  * white-hot, cooling to red as it slows.
@@ -72,12 +88,13 @@ export function BigBang({
 
     let w = 0
     let h = 0
+    let dpr = 1
     let raf = 0
     let last = performance.now()
     let bangAt = 0
 
     const resize = () => {
-      const dpr = Math.min(window.devicePixelRatio || 1, 2)
+      dpr = Math.min(window.devicePixelRatio || 1, 2)
       w = window.innerWidth
       h = window.innerHeight
       canvas.width = w * dpr
@@ -89,87 +106,78 @@ export function BigBang({
     const cy = origin?.y ?? h / 2
     const unit = Math.min(w, h)
 
-    // ------------------------------------------------------------ cosmos: the field and the web it will fall into
-    const grains: Grain[] = []
-    const nodes: { x: number; y: number; m: number }[] = []
-    const edges: [number, number][] = []
-    const bends: { x: number; y: number }[] = []
+    // ------------------------------------------------------------ cosmos: the first stars and galaxies, everywhere at once
+    const specks: Speck[] = []
+    const galaxies: Galaxy[] = []
+    const sprites: HTMLCanvasElement[] = []
     if (mode === "cosmos") {
-      // Knots over a loose grid running past the edges, so the web fills the screen with no empty corner
-      const cols = w > h ? 6 : 3
-      const rows = w > h ? 4 : 5
-      for (let r = 0; r < rows; r++)
-        for (let c = 0; c < cols; c++)
-          nodes.push({
-            x: w * (-0.04 + (1.08 * (c + 0.5 + (Math.random() - 0.5) * 0.85)) / cols),
-            y: h * (-0.04 + (1.08 * (r + 0.5 + (Math.random() - 0.5) * 0.85)) / rows),
-            m: 0.3 + 0.7 * Math.pow(Math.random(), 2),
-          })
-      // Filaments: each knot joins its three nearest neighbours, leaving voids between
-      nodes.forEach((n, i) => {
-        nodes
-          .map((m, j) => ({ j, d: Math.hypot(m.x - n.x, m.y - n.y) }))
-          .filter((e) => e.j !== i)
-          .sort((a, b) => a.d - b.d)
-          .slice(0, 3)
-          .forEach(({ j }) => {
-            if (edges.some(([a, b]) => (a === i && b === j) || (a === j && b === i))) return
-            edges.push([i, j])
-            const m = nodes[j]
-            const bend = (Math.random() - 0.5) * 0.5
-            bends.push({ x: (n.x + m.x) / 2 - (m.y - n.y) * bend, y: (n.y + m.y) / 2 + (m.x - n.x) * bend })
-          })
+      const coarse = window.matchMedia("(pointer: coarse)").matches
+      // Past every corner, so the expanding field never shows an edge
+      const reach = Math.hypot(w, h) * 0.6
+      // Gravity has begun to gather matter: some of it sits in loose clumps
+      const clumps = Array.from({ length: coarse ? 7 : 12 }, () => {
+        const a = Math.random() * Math.PI * 2
+        const d = Math.sqrt(Math.random()) * reach * 0.8
+        return { x: Math.cos(a) * d, y: Math.sin(a) * d }
       })
-      const gauss = () => (Math.random() + Math.random() + Math.random() - 1.5) / 1.5
-      const count = Math.round(Math.min(2200, (w * h) / 650))
+      const place = () => {
+        if (Math.random() < 0.45) {
+          const c = clumps[(Math.random() * clumps.length) | 0]
+          const s = unit * (0.04 + Math.random() * 0.08)
+          return { qx: c.x + gauss() * s, qy: c.y + gauss() * s }
+        }
+        const a = Math.random() * Math.PI * 2
+        const d = Math.sqrt(Math.random()) * reach
+        return { qx: Math.cos(a) * d, qy: Math.sin(a) * d }
+      }
+      const count = Math.round(Math.min(1500, (w * h) / 900))
       for (let i = 0; i < count; i++) {
-        // A round field reaching past every corner, so the expanding universe never shows an edge
-        const ang = Math.random() * Math.PI * 2
-        const rad = Math.sqrt(Math.random()) * Math.hypot(w, h) * 0.62
-        const qx = Math.cos(ang) * rad
-        const qy = Math.sin(ang) * rad
-        const ex = cx + qx
-        const ey = cy + qy
-        // Gravity gathers each grain toward the structure nearest it; voids drain
-        let near = 0
-        let best = Infinity
-        nodes.forEach((n, k) => {
-          const d = Math.hypot(n.x - ex, n.y - ey)
-          if (d < best) {
-            best = d
-            near = k
-          }
+        const big = Math.random() < 0.06
+        specks.push({
+          ...place(),
+          // They light up across the whole view within the same moment, not spreading out from anywhere
+          born: 0.55 + Math.random() * 0.9,
+          peak: big ? 1 : 0.45 + 0.55 * Math.pow(Math.random(), 1.5),
+          tone: Math.random() < 0.7 ? 0 : Math.random() < 0.5 ? 1 : 2,
+          seed: Math.random(),
+          px: 0,
+          py: 0,
+          tx: 0,
+          ty: 0,
+          size: big ? 2.2 + Math.random() * 1.4 : 0.8 + Math.random() * 1.2,
+          alpha: 0,
         })
-        const roll = Math.random()
-        let gx = ex
-        let gy = ey
-        let pull = 1
-        let node = false
-        const hub = nodes[near]
-        if (roll < 0.1 + 0.3 * hub.m) {
-          const spread = unit * (0.008 + 0.022 * hub.m)
-          gx = hub.x + gauss() * spread
-          gy = hub.y + gauss() * spread
-          node = true
-        } else if (roll < 0.9) {
-          const own = edges.map((_, k) => k).filter((k) => edges[k][0] === near || edges[k][1] === near)
-          if (own.length) {
-            const k = own[(Math.random() * own.length) | 0]
-            const [a, b] = edges[k]
-            const from = nodes[a === near ? a : b]
-            const to = nodes[a === near ? b : a]
-            const c = bends[k]
-            // A point on the curved filament, from the nearer knot to about halfway
-            const u = Math.random() * 0.55
-            const bx = (1 - u) * (1 - u) * from.x + 2 * (1 - u) * u * c.x + u * u * to.x
-            const by = (1 - u) * (1 - u) * from.y + 2 * (1 - u) * u * c.y + u * u * to.y
-            const len = Math.hypot(to.x - from.x, to.y - from.y) || 1
-            const off = gauss() * unit * 0.009
-            gx = bx - ((to.y - from.y) / len) * off
-            gy = by + ((to.x - from.x) / len) * off
-          }
-        } else pull = 0.15
-        grains.push({ qx, qy, gx, gy, pull, node, seed: Math.random(), px: cx, py: cy, tx: cx, ty: cy, size: 0.8 + Math.random() * 1.4, alpha: 0 })
+      }
+      // A warm elliptical, a spiral with a gold core in a blue disc, a small blue irregular
+      sprites.push(
+        sprite([
+          [0, "rgba(255,244,226,1)"],
+          [0.25, "rgba(255,214,160,0.55)"],
+          [1, "rgba(255,190,140,0)"],
+        ]),
+        sprite([
+          [0, "rgba(255,240,215,1)"],
+          [0.12, "rgba(255,226,190,0.7)"],
+          [0.3, "rgba(175,195,255,0.35)"],
+          [1, "rgba(140,160,255,0)"],
+        ]),
+        sprite([
+          [0, "rgba(215,225,255,0.85)"],
+          [0.4, "rgba(170,190,255,0.3)"],
+          [1, "rgba(150,170,255,0)"],
+        ]),
+      )
+      // A deep field: many small galaxies, a few near enough to be large, some seen edge-on
+      for (let i = 0; i < (coarse ? 40 : 90); i++) {
+        galaxies.push({
+          ...place(),
+          born: 1.0 + Math.random() * 0.6,
+          size: unit * (0.012 + Math.pow(Math.random(), 2.2) * 0.035),
+          tilt: Math.random() * Math.PI,
+          flat: 0.15 + Math.random() * 0.85,
+          kind: (Math.random() * 3) | 0,
+          peak: 0.7 + Math.random() * 0.3,
+        })
       }
     }
 
@@ -201,7 +209,8 @@ export function BigBang({
     }
 
     // One list per colour, so each colour is set once per frame
-    const groups: Seg[][] = Array.from({ length: STEPS + 2 }, () => [])
+    const groups: Seg[][] = Array.from({ length: STEPS }, () => [])
+    const colors = mode === "cosmos" ? TONES : HEAT
     const stroke = (color: string, list: Seg[]) => {
       if (!list.length) return
       ctx.strokeStyle = color
@@ -214,9 +223,6 @@ export function BigBang({
         ctx.stroke()
       }
     }
-
-    // Scale factor of the universe once inflation has filled the view: a slowing stretch
-    const scale = (t: number) => 0.85 + 0.35 * (1 - Math.exp(-Math.max(0, t - 0.22) * 1.2))
 
     const draw = (now: number) => {
       const dt = Math.min(0.05, (now - last) / 1000)
@@ -232,59 +238,35 @@ export function BigBang({
       const t = bangAt ? (now - bangAt) / 1000 : -1
 
       if (mode === "cosmos" && t >= 0) {
-        const a = scale(t)
-        // Hot until the fog clears, then neutral gas; gravity builds the web; it all hands over to the galaxy
-        const temp = 1.25 * Math.exp(-t * 1.5)
-        const clear = smooth(1.0, 1.5, t)
-        const web = smooth(1.25, 2.15, t)
+        // Space keeps expanding, slowly now: everything drifts apart from everything else
+        const a = 1 + t * 0.12
+        // Then it all hands over to the galaxy behind the page
         const out = 1 - smooth(2.45, 2.85, t)
-        // Matter shows once the plasma fills the view, never as debris racing out of a fireball
-        const born = smooth(0.22, 0.45, t)
-        const hotGroup = heatIndex(temp)
-        if (born > 0) for (const g of grains) {
-          const ex = cx + g.qx * a
-          const ey = cy + g.qy * a
-          const k = web * g.pull
-          const x = ex + (g.gx - ex) * k
-          const y = ey + (g.gy - ey) * k
-          // A zero-length line draws nothing, so each grain is a hair-length stroke (its round caps make the dot)
-          g.px = x - 0.05
-          g.py = y
-          g.tx = x
-          g.ty = y
-          if (x < -20 || x > w + 20 || y < -20 || y > h + 20) continue
-          const star = g.node && web > 0.55
-          const twinkle = 0.75 + 0.25 * Math.sin(now / 160 + g.seed * 40)
-          g.alpha = (star ? 0.45 + 0.55 * smooth(0.55, 1, web) * twinkle : (1 - clear) * 0.6 + clear * (0.35 + 0.5 * web)) * out * born
-          groups[star ? STEPS + 1 : clear > 0.5 ? STEPS : hotGroup].push(g)
+        for (const g of galaxies) {
+          const lit = smooth(g.born, g.born + 0.4, t) * g.peak * out
+          if (lit <= 0) continue
+          const x = cx + g.qx * a
+          const y = cy + g.qy * a
+          const c = Math.cos(g.tilt) * g.size * dpr
+          const s = Math.sin(g.tilt) * g.size * dpr
+          ctx.globalAlpha = lit
+          ctx.setTransform(c, s, -s * g.flat, c * g.flat, x * dpr, y * dpr)
+          ctx.drawImage(sprites[g.kind], -0.5, -0.5, 1, 1)
         }
-        if (web > 0.2) {
-          // Gas glowing faintly along the filaments of the cosmic web
-          const f = smooth(0.2, 1, web) * out
-          ctx.globalAlpha = 1
-          for (const [width, alpha] of [
-            [unit * 0.04, 0.02],
-            [unit * 0.012, 0.03],
-          ]) {
-            ctx.lineWidth = width
-            ctx.strokeStyle = `rgba(150,160,255,${(alpha * f).toFixed(3)})`
-            ctx.beginPath()
-            edges.forEach(([i, j], k) => {
-              ctx.moveTo(nodes[i].x, nodes[i].y)
-              ctx.quadraticCurveTo(bends[k].x, bends[k].y, nodes[j].x, nodes[j].y)
-            })
-            ctx.stroke()
-          }
-          // Where filaments meet, the first stars and galaxies light up
-          for (const n of nodes) {
-            const r = unit * (0.015 + 0.045 * n.m)
-            const glow = ctx.createRadialGradient(n.x, n.y, 0, n.x, n.y, r)
-            glow.addColorStop(0, `rgba(235,240,255,${(0.65 * n.m * f).toFixed(3)})`)
-            glow.addColorStop(0.2, `rgba(180,190,255,${(0.3 * n.m * f).toFixed(3)})`)
-            glow.addColorStop(1, "rgba(120,110,230,0)")
-            ctx.fillStyle = glow
-            ctx.fillRect(n.x - r, n.y - r, r * 2, r * 2)
-          }
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+        for (const s of specks) {
+          const lit = smooth(s.born, s.born + 0.3, t)
+          if (lit <= 0) continue
+          const x = cx + s.qx * a
+          const y = cy + s.qy * a
+          if (x < -10 || x > w + 10 || y < -10 || y > h + 10) continue
+          // A zero-length line draws nothing, so each speck is a hair-length stroke (its round caps make the dot)
+          s.px = x - 0.05
+          s.py = y
+          s.tx = x
+          s.ty = y
+          s.alpha = s.peak * lit * out * (0.85 + 0.15 * Math.sin(now / 220 + s.seed * 40))
+          groups[s.tone].push(s)
         }
       } else if (mode === "ejecta" && t >= 0) {
         // Exponential drag: the blast slows to a gentle drift
@@ -306,7 +288,7 @@ export function BigBang({
         }
       }
 
-      for (let i = 0; i < groups.length; i++) stroke(i < STEPS ? HEAT[i] : i === STEPS ? GAS : STAR, groups[i])
+      for (let i = 0; i < groups.length; i++) stroke(colors[i], groups[i])
       ctx.globalAlpha = 1
       ctx.globalCompositeOperation = "source-over"
       raf = requestAnimationFrame(draw)
