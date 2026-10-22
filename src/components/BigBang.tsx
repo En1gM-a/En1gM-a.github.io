@@ -9,9 +9,10 @@ type Speck = Seg & { qx: number; qy: number; born: number; peak: number; tone: n
 /** A galaxy near enough to show its shape: a soft sprite, tilted and flattened */
 type Galaxy = { qx: number; qy: number; born: number; size: number; tilt: number; flat: number; kind: number; peak: number }
 
-type Mote = Seg & { x: number; y: number; vx: number; vy: number; life: number; heat: number; cool: number }
+/** Matter falling into the black hole: where it starts, when, how long it takes to reach the horizon, how it swirls */
+type Infaller = Seg & { r0: number; th0: number; delay: number; dur: number; spin: number; tone: number; drawn: boolean }
 
-// Hot matter as it cools (same ramp as the plasma): dull red → orange → yellow → white → blue-white
+// Matter heating as it nears the black hole: dull red → orange → yellow → white → blue-white
 const RAMP: [number, [number, number, number]][] = [
   [0, [70, 8, 20]],
   [0.25, [140, 20, 30]],
@@ -63,8 +64,9 @@ function sprite(stops: [number, string][]) {
  * gathers them, and the fog clears to a deep field of galaxies that keeps
  * drifting apart as space expands.
  *
- * "ejecta" is a real explosion, for the supernova: debris blasted outward
- * white-hot, cooling to red as it slows.
+ * "infall" is for the black hole behind "Back to orbit": stars and dust all
+ * around spiral in, faster and faster, heating from white starlight to orange
+ * and then white-hot as they near the horizon, where they vanish.
  */
 export function BigBang({
   bang,
@@ -74,7 +76,7 @@ export function BigBang({
   bang: boolean
   /** Where it starts (viewport px); defaults to the centre */
   origin?: { x: number; y: number }
-  mode?: "cosmos" | "ejecta"
+  mode?: "cosmos" | "infall"
 }) {
   const ref = useRef<HTMLCanvasElement>(null)
   const bangRef = useRef(bang)
@@ -90,7 +92,6 @@ export function BigBang({
     let h = 0
     let dpr = 1
     let raf = 0
-    let last = performance.now()
     let bangAt = 0
 
     const resize = () => {
@@ -181,36 +182,35 @@ export function BigBang({
       }
     }
 
-    // ------------------------------------------------------------ ejecta: debris from a real explosion
-    let motes: Mote[] = []
-    const explode = () => {
-      const count = Math.round(Math.min(2600, (w * h) / 650))
-      const reach = Math.hypot(w, h) * 0.55
-      motes = Array.from({ length: count }, () => {
-        const a = Math.random() * Math.PI * 2
-        // Most debris stays near the star, a little flies to the edges of the screen
-        const speed = (0.18 + Math.pow(Math.random(), 1.8) * 1.15) * reach * 2.4
-        return {
-          x: cx,
-          y: cy,
+    // ------------------------------------------------------------ infall: everything spiralling into the black hole
+    const infall: Infaller[] = []
+    if (mode === "infall") {
+      const reach = Math.hypot(Math.max(cx, w - cx), Math.max(cy, h - cy)) * 1.05
+      const count = Math.round(Math.min(1400, (w * h) / 800))
+      for (let i = 0; i < count; i++) {
+        infall.push({
+          r0: unit * 0.1 + Math.sqrt(Math.random()) * reach,
+          th0: Math.random() * Math.PI * 2,
+          delay: 0.05 + Math.random() * 0.45,
+          dur: 0.9 + Math.random() * 0.8,
+          spin: 0.8 + Math.random() * 0.8,
+          tone: Math.random() < 0.7 ? 0 : 1 + ((Math.random() * 2) | 0),
           px: cx,
           py: cy,
           tx: cx,
           ty: cy,
-          alpha: 1,
-          vx: Math.cos(a) * speed,
-          vy: Math.sin(a) * speed,
-          size: 0.5 + Math.random() * 1.8,
-          life: 0.6 + Math.random() * 0.4,
-          heat: 0.85 + Math.random() * 0.35,
-          cool: 0.55 + Math.random() * 0.9,
-        }
-      })
+          size: 0.6 + Math.random() * 1.4,
+          alpha: 0,
+          drawn: false,
+        })
+      }
     }
+    // The horizon's radius in px, as the shader draws it: it opens, holds, then shrinks to a point
+    const horizon = (t: number) => 0.085 * Math.min(w, h) * smooth(0, 0.7, t) * (1 - smooth(1.7, 2.25, t))
 
     // One list per colour, so each colour is set once per frame
-    const groups: Seg[][] = Array.from({ length: STEPS }, () => [])
-    const colors = mode === "cosmos" ? TONES : HEAT
+    const palette = mode === "cosmos" ? TONES : [...HEAT, ...TONES]
+    const groups: Seg[][] = palette.map(() => [])
     const stroke = (color: string, list: Seg[]) => {
       if (!list.length) return
       ctx.strokeStyle = color
@@ -225,16 +225,11 @@ export function BigBang({
     }
 
     const draw = (now: number) => {
-      const dt = Math.min(0.05, (now - last) / 1000)
-      last = now
       ctx.clearRect(0, 0, w, h)
       ctx.globalCompositeOperation = "lighter"
       ctx.lineCap = "round"
       for (const l of groups) l.length = 0
-      if (bangRef.current && !bangAt) {
-        bangAt = now
-        if (mode === "ejecta") explode()
-      }
+      if (bangRef.current && !bangAt) bangAt = now
       const t = bangAt ? (now - bangAt) / 1000 : -1
 
       if (mode === "cosmos" && t >= 0) {
@@ -268,27 +263,31 @@ export function BigBang({
           s.alpha = s.peak * lit * out * (0.85 + 0.15 * Math.sin(now / 220 + s.seed * 40))
           groups[s.tone].push(s)
         }
-      } else if (mode === "ejecta" && t >= 0) {
-        // Exponential drag: the blast slows to a gentle drift
-        const drag = Math.pow(0.035, dt)
-        for (const m of motes) {
-          m.px = m.x
-          m.py = m.y
-          m.vx *= drag
-          m.vy *= drag
-          m.x += m.vx * dt
-          m.y += m.vy * dt
-          const fade = Math.max(0, 1 - t / (2.6 * m.life))
-          if (fade <= 0) continue
-          // Trail length follows speed, so the streaks shorten into points as they settle
-          m.tx = m.x + (m.x - m.px) * 0.01
-          m.ty = m.y + (m.y - m.py) * 0.01
-          m.alpha = fade
-          groups[heatIndex(m.heat * Math.exp(-t * m.cool))].push(m)
+      } else if (mode === "infall" && t >= 0) {
+        const R = horizon(t)
+        for (const m of infall) {
+          const u = (t - m.delay) / m.dur
+          if (u <= 0 || u >= 1) continue
+          // Slow at first, then faster and faster; the closer in, the faster it turns (a tightening spiral)
+          const r = m.r0 * (1 - u * u)
+          if (r <= R * 0.95) continue
+          const th = m.th0 + m.spin * Math.log(m.r0 / Math.max(r, 1))
+          const x = cx + Math.cos(th) * r
+          const y = cy + Math.sin(th) * r
+          // Each frame draws the path since the last one, so the streaks lengthen as it speeds up
+          m.px = m.drawn ? m.tx : x - 0.05
+          m.py = m.drawn ? m.ty : y
+          m.tx = x
+          m.ty = y
+          m.drawn = true
+          // Heated as it nears the hole: white starlight turns orange, then white-hot
+          const heat = Math.min(1.2, (R * 2.4) / r)
+          m.alpha = smooth(0, 0.15, u) * smooth(R * 0.95, R * 1.8, r)
+          groups[heat > 0.3 ? heatIndex(0.45 + heat * 0.6) : STEPS + m.tone].push(m)
         }
       }
 
-      for (let i = 0; i < groups.length; i++) stroke(colors[i], groups[i])
+      for (let i = 0; i < groups.length; i++) stroke(palette[i], groups[i])
       ctx.globalAlpha = 1
       ctx.globalCompositeOperation = "source-over"
       raf = requestAnimationFrame(draw)

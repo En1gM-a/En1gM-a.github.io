@@ -234,8 +234,8 @@ export function Hero({ stage, skipped, onSkip }: { stage: number; skipped: boole
         aria-hidden
         className="label gutter absolute top-24 right-0 left-0 z-10 hidden justify-between md:flex"
         initial={{ opacity: 0 }}
-        animate={online ? { opacity: 1 } : undefined}
-        transition={{ duration: 0.8, delay: 0.2 }}
+        animate={{ opacity: online ? 1 : 0 }}
+        transition={{ duration: 0.8, delay: online ? 0.2 : 0 }}
       >
         <span>
           Crew ID <span className="text-ink">KAB-0001</span>

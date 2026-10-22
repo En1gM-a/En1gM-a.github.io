@@ -11,8 +11,11 @@ import { useEffect, useRef } from "react"
  * expands, dims as it cools, and thins away until light travels freely and
  * the first galaxies show through.
  *
- * Supernova, as telescopes see one: a star flaring with diffraction spikes,
- * then a thin shell of ejecta torn into filaments around a blue inner glow.
+ * Black hole, for "Back to orbit": a shadow edged by its photon ring and a
+ * tilted disk of infalling gas (white-hot at its inner edge, brighter on the
+ * side turning toward us, its far side bent into view over the top) while the
+ * dark spreads over the screen; then it shrinks to a violet point of light,
+ * the singularity the intro starts from.
  * Without WebGL 2 it draws nothing and the particles carry the moment.
  */
 
@@ -28,7 +31,6 @@ uniform vec2 uOrigin;
 uniform float uPre;
 uniform float uT;
 uniform float uKind;
-uniform float uReach;
 out vec4 o;
 
 float hash(vec2 p) { p = fract(p * vec2(123.34, 456.21)); p += dot(p, p + 45.32); return fract(p.x * p.y); }
@@ -45,9 +47,9 @@ void main() {
   vec2 frag = vec2(gl_FragCoord.x, uRes.y - gl_FragCoord.y);
   vec2 p = (frag - uOrigin) / uRes.y;
   float r = length(p);
-  // Noise follows the direction from the centre (a unit vector), never the angle, which would seam at 180 degrees
-  vec2 dir = p / max(r, 0.0001);
   vec3 col = vec3(0.0);
+  // Darkness that covers the page even where nothing glows (the black hole's)
+  float dark = 0.0;
 
   if (uKind < 0.5) {
     if (uT < 0.0) {
@@ -74,31 +76,43 @@ void main() {
       col *= 0.88 * exp(-max(0.0, t - 0.35) * 1.5) * keep * smoothstep(0.0, 0.05, t);
     }
   } else {
-    // A supernova really is an explosion, seen the way telescopes see one
-    if (uT < 0.0) {
-      // The star flickers and contracts as its core gives way
-      float g = clamp(uPre / 0.22, 0.0, 1.0);
-      col = vec3(0.85, 0.93, 1.0) * exp(-r * r * (1400.0 - 900.0 * g)) * (0.5 + 1.2 * g);
-    } else {
-      float t = uT;
-      // One star outshines everything, flaring with diffraction spikes
-      float flare = exp(-t * 2.6);
-      float core = 0.0008 / (r * r + 0.0001);
-      float spikes = exp(-abs(p.y) * 240.0) * exp(-abs(p.x) * 3.0) + exp(-abs(p.x) * 240.0) * exp(-abs(p.y) * 3.0);
-      col = vec3(0.86, 0.93, 1.0) * (core * 0.3 + spikes * 1.4) * flare;
-      col += vec3(1.0) * exp(-t * 6.0) * 0.5;
-      // The remnant: a thin shell of ejecta racing out, torn into red and orange filaments
-      float R = uReach * 1.15 * (1.0 - exp(-t * 1.6));
-      float n = fbm(dir * 6.0 + vec2(t * 0.5, 0.0) + p * 3.0);
-      float shell = exp(-pow((r - R * (0.9 + 0.2 * n)) / (0.025 + 0.05 * t), 2.0));
-      float fil = pow(fbm(dir * 14.0 + p * 6.0 - t), 2.5) * 2.0;
-      col += mix(vec3(1.0, 0.45, 0.25), vec3(0.95, 0.28, 0.55), n) * shell * (0.6 + fil) * exp(-t * 0.9);
-      // Inside, the blue glow of the newborn pulsar's wind
-      float inside = (1.0 - smoothstep(R * 0.4, R * 0.95, r)) * exp(-t * 1.2);
-      col += vec3(0.35, 0.55, 1.0) * inside * 0.35 * (0.6 + 0.6 * fbm(p * 5.0 + t));
-    }
+    // A black hole opens here and takes everything, then shrinks to a point of light
+    float t = max(uT, 0.0);
+    // Sized by the screen's shorter side, so on a phone the disk still fits across
+    float R = 0.085 * min(1.0, uRes.x / uRes.y) * smoothstep(0.0, 0.7, t) * (1.0 - smoothstep(1.7, 2.25, t));
+    float iR = 1.0 / max(R, 0.0005);
+    float shadow = 1.0 - smoothstep(R * 0.92, R * 1.02 + 0.0005, r);
+    float lit = smoothstep(0.15, 0.8, t) * (1.0 - smoothstep(1.55, 2.1, t));
+    // Its disk of infalling gas, tilted toward us: turning faster the closer in, white-hot at the inner edge
+    vec2 dp = vec2(p.x, p.y / 0.24);
+    float d = length(dp);
+    float u = d * iR;
+    float a = t * 3.2 / pow(max(u, 1.0), 1.5);
+    float gas = fbm(mat2(cos(a), -sin(a), sin(a), cos(a)) * dp * iR * 1.6 + 7.0);
+    float band = smoothstep(1.3, 1.8, u) * (1.0 - smoothstep(2.8, 5.0, u));
+    float heat = clamp(2.4 / (u * u + 0.0001), 0.0, 1.0);
+    vec3 hot = mix(vec3(0.85, 0.24, 0.05), vec3(1.0, 0.72, 0.36), smoothstep(0.08, 0.4, heat));
+    hot = mix(hot, vec3(1.0, 0.96, 0.9), smoothstep(0.45, 1.0, heat));
+    // The side turning toward us is beamed brighter; the far half passes behind the shadow
+    float beam = 1.0 + 0.6 * dp.x / max(d, 0.0001);
+    float behind = (1.0 - smoothstep(-0.003, 0.003, p.y)) * shadow;
+    col = hot * band * (0.35 + 1.1 * gas) * beam * (1.0 - behind);
+    // Light from the far side, bent over the top and under the bottom of the shadow
+    float zb = (r - R * 1.42) / (R * 0.2 + 0.0001);
+    float a2 = t * 2.4;
+    float arc = fbm(mat2(cos(a2), -sin(a2), sin(a2), cos(a2)) * p * iR * 1.4 + 3.0);
+    col += vec3(1.0, 0.7, 0.36) * exp(-zb * zb) * (1.0 - shadow) * (0.35 + 0.8 * arc);
+    // The photon ring, hugging the edge of the shadow
+    float zr = (r - R * 1.05) / (R * 0.04 + 0.0001);
+    col += vec3(1.0, 0.93, 0.82) * exp(-zr * zr) * 0.9;
+    col *= lit;
+    // The dark spreads: around the hole first, then over everything once it has all fallen in
+    float near = (1.0 - smoothstep(R, R * 6.0 + 0.001, r)) * 0.5 * smoothstep(0.0, 0.7, t);
+    dark = max(shadow, max(near, smoothstep(1.45, 1.9, t)));
+    // What is left is a point of light: the singularity the Big Bang starts from
+    col += vec3(0.62, 0.46, 1.0) * (0.00005 / (r * r + 0.0002)) * smoothstep(1.8, 2.25, t);
   }
-  float alpha = clamp(max(col.r, max(col.g, col.b)), 0.0, 1.0);
+  float alpha = clamp(max(max(col.r, max(col.g, col.b)), dark), 0.0, 1.0);
   o = vec4(min(col, vec3(alpha)), alpha);
 }
 `
@@ -111,16 +125,22 @@ export function Plasma({
   bang: boolean
   /** Viewport px; defaults to the centre */
   origin?: { x: number; y: number }
-  kind?: "bigbang" | "supernova"
+  kind?: "bigbang" | "blackhole"
 }) {
-  const ref = useRef<HTMLCanvasElement>(null)
+  const ref = useRef<HTMLDivElement>(null)
   const bangRef = useRef(bang)
   bangRef.current = bang
 
   useEffect(() => {
-    const canvas = ref.current
-    const gl = canvas?.getContext("webgl2", { premultipliedAlpha: true, alpha: true, antialias: false })
-    if (!canvas || !gl) return
+    const host = ref.current
+    if (!host) return
+    // A fresh canvas each run, so its context can be freed on cleanup and a remount (React's
+    // StrictMode does one in development) never inherits a lost one
+    const canvas = document.createElement("canvas")
+    canvas.className = "absolute inset-0 h-full w-full"
+    host.appendChild(canvas)
+    const gl = canvas.getContext("webgl2", { premultipliedAlpha: true, alpha: true, antialias: false })
+    if (!gl) return () => canvas.remove()
     const compile = (type: number, src: string) => {
       const s = gl.createShader(type)!
       gl.shaderSource(s, src)
@@ -140,7 +160,6 @@ export function Plasma({
     let uOrigin: WebGLUniformLocation | null = null
     let uPre: WebGLUniformLocation | null = null
     let uT: WebGLUniformLocation | null = null
-    let uReach: WebGLUniformLocation | null = null
     let linked = false
     let broken = false
     // Once linked: bind the program, its quad and its uniforms
@@ -155,8 +174,7 @@ export function Plasma({
       uOrigin = u("uOrigin")
       uPre = u("uPre")
       uT = u("uT")
-      uReach = u("uReach")
-      gl.uniform1f(u("uKind"), kind === "supernova" ? 1 : 0)
+      gl.uniform1f(u("uKind"), kind === "blackhole" ? 1 : 0)
       linked = true
       resize()
     }
@@ -176,8 +194,6 @@ export function Plasma({
       const ox = (origin?.x ?? window.innerWidth / 2) * scale
       const oy = (origin?.y ?? window.innerHeight / 2) * scale
       gl.uniform2f(uOrigin, ox, oy)
-      // Far enough, in screen heights, to reach the farthest corner
-      gl.uniform1f(uReach, Math.hypot(Math.max(ox, w - ox), Math.max(oy, h - oy)) / h)
     }
     resize()
 
@@ -200,8 +216,8 @@ export function Plasma({
       gl.clearColor(0, 0, 0, 0)
       gl.clear(gl.COLOR_BUFFER_BIT)
       gl.drawArrays(gl.TRIANGLES, 0, 3)
-      // Once the fog has cleared (or the remnant faded) there is nothing left to draw
-      if (t < (kind === "supernova" ? 3.4 : 2)) raf = requestAnimationFrame(frame)
+      // Once the fog has cleared (or the black hole's overlay has faded) there is nothing left to draw
+      if (t < (kind === "blackhole" ? 3.4 : 2)) raf = requestAnimationFrame(frame)
       else gl.clear(gl.COLOR_BUFFER_BIT)
     }
     raf = requestAnimationFrame(frame)
@@ -212,10 +228,11 @@ export function Plasma({
       gl.deleteBuffer(buf)
       gl.deleteProgram(prog)
       gl.getExtension("WEBGL_lose_context")?.loseContext()
+      canvas.remove()
     }
-    // The blast is set up once; origin and kind are fixed for its lifetime
+    // Set up once; origin and kind are fixed for its lifetime
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  return <canvas ref={ref} aria-hidden className="pointer-events-none fixed inset-0 h-full w-full" />
+  return <div ref={ref} aria-hidden className="pointer-events-none fixed inset-0" />
 }

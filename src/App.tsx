@@ -8,7 +8,7 @@ import { About } from "./components/About"
 import { Skills } from "./components/Skills"
 import { Projects } from "./components/Projects"
 import { Contact } from "./components/Contact"
-import { Supernova } from "./components/Supernova"
+import { BlackHole } from "./components/BlackHole"
 import { WarpJump } from "./components/WarpJump"
 import { STAGE, useIntro } from "./hooks/useIntro"
 import { profile } from "./data/content"
@@ -29,14 +29,13 @@ export default function App() {
   const { stage, skipped, skip, replay } = useIntro()
   const online = stage >= STAGE.done
   const reduce = useReducedMotion()
-  const [nova, setNova] = useState<{ x: number; y: number } | null>(null)
+  const [falling, setFalling] = useState(false)
 
-  // "Back to orbit": blow the page up from the link and replay the Big Bang (a plain jump with reduced motion)
+  // "Back to orbit": a black hole takes the page and the Big Bang replays from its singularity (a plain jump with reduced motion)
   const backToOrbit = (e: MouseEvent<HTMLAnchorElement>) => {
-    if (reduce || nova) return
+    if (reduce || falling) return
     e.preventDefault()
-    const r = e.currentTarget.getBoundingClientRect()
-    setNova({ x: r.left + r.width / 2, y: r.top + r.height / 2 })
+    setFalling(true)
   }
   const restart = () => {
     window.scrollTo({ top: 0, behavior: "instant" })
@@ -51,6 +50,7 @@ export default function App() {
       <GalaxyBackground shown={stage >= STAGE.decrypt} arrived={stage >= STAGE.settle} />
       <div
         aria-hidden
+        data-backdrop
         className="pointer-events-none fixed inset-0 -z-10 bg-[radial-gradient(ellipse_60%_40%_at_85%_10%,rgb(167_139_250/0.10),transparent_70%),radial-gradient(ellipse_50%_40%_at_5%_90%,rgb(103_232_249/0.07),transparent_70%)]"
       />
       {online && <ScrollProgress />}
@@ -75,7 +75,7 @@ export default function App() {
           Back to orbit ↑
         </a>
       </footer>
-      {nova && <Supernova origin={nova} onBlackout={restart} onDone={() => setNova(null)} />}
+      {falling && <BlackHole onBlackout={restart} onDone={() => setFalling(false)} />}
       <WarpJump />
     </MotionConfig>
   )

@@ -50,7 +50,7 @@ export function Nav({ visible }: { visible: boolean }) {
         scrolled ? "border-b border-line bg-void/70 backdrop-blur-xl" : "border-b border-transparent"
       }`}
       initial={{ opacity: 0, y: -12 }}
-      animate={visible ? { opacity: 1, y: 0 } : undefined}
+      animate={visible ? { opacity: 1, y: 0 } : { opacity: 0, y: -12 }}
       transition={{ duration: 0.6, ease: "easeOut" }}
       inert={!visible}
     >

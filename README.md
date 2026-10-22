@@ -6,7 +6,7 @@ Personal portfolio for Karl Adrian Bensi, BSCpE student and full stack developer
 - **Intro** — the Big Bang after NASA's own visualisation of it, which is not an explosion: no centre, no fireball, no fire. A violet point of light blooms into a cool glow that fills everything, the whole universe glows evenly as a pale fog that dims as it cools, the first stars light up everywhere at once inside it, and the fog thins away to a deep field of galaxies drifting apart as space expands. The letters of KARL condense out of the fog where they stand with an RGB split, glitch-decrypt into PORTFOLIO, and stars stream in to assemble a black-and-white dot portrait behind the title. It stays made of stars: they push away from the cursor, get a periodic scan sweep, and scatter as you scroll away.
 - **Galaxy** — a real-time Three.js spiral galaxy (GPU-animated, differential rotation, nebula clouds, a radar pulse) sits behind the page. The camera follows a path as you scroll and drifts with the mouse; it dims behind each section so content leads.
 - **Backdrop life** — an astronaut in NASA's EVA suit drifts beside each section on a glowing data tether. Grab him with the mouse and throw him (he tumbles, then the tether reels him back), tap him on a phone to send him spinning; in the Projects voyage he floats in the open corner beside each planet, clear of the project details. Around him: Hubble-palette gas clouds, stars with diffraction spikes, asteroids, a satellite, shooting stars and drifting dust, kept to the open edges so the text stays readable.
-- **Navigation** — nav links jump through hyperspace instead of scrolling past every section, and "Back to orbit" sets off a supernova as telescopes see one (a flare with diffraction spikes, then a filamentary shell) and replays the Big Bang.
+- **Navigation** — nav links jump through hyperspace instead of scrolling past every section, and "Back to orbit" opens a black hole that pulls in the page, the nav and the sky, then shrinks to the point of light the Big Bang replays from.
 - **Sections** — a scroll word-reveal and a crew ID card that tilts and flips (About), an interactive orbital system plus a tech ticker (Skills), a scroll-driven voyage where every project is its own planet and you warp between them (Projects): living worlds with oceans, drifting clouds and city lights at night, gas giants with storms, zonal winds and lightning, a molten world with glowing rifts, each in its own Hubble-palette nebula with its galaxy overhead, and a magnetic email button that sends the galaxy into warp (Contact).
 
 Built with React, Vite, Tailwind CSS, [Motion](https://motion.dev) and [Three.js](https://threejs.org).
@@ -51,8 +51,8 @@ Name the repository `En1gM-a.github.io` to serve the site at https://en1gm-a.git
 | --- | --- |
 | `src/boot.ts`, `index.html` | The loader: what the first load waits for (with a cap), its progress, and the hand-off to the intro |
 | `src/hooks/useIntro.ts` | Intro timeline (starts when the loader lets go), skip and reduced-motion handling |
-| `src/components/BigBang.tsx` | The opening's first stars and deep field of galaxies, lighting up everywhere at once and drifting apart as space expands; also the supernova's debris |
-| `src/components/Plasma.tsx` | The young universe's light in one low-resolution shader: the violet point, the cool bloom of inflation, the glowing fog that dims and clears; also the supernova's flare and shell |
+| `src/components/BigBang.tsx` | The opening's first stars and deep field of galaxies, lighting up everywhere at once and drifting apart as space expands; also the stars and dust spiralling into the black hole |
+| `src/components/Plasma.tsx` | The young universe's light in one low-resolution shader: the violet point, the cool bloom of inflation, the glowing fog that dims and clears; also the black hole, its photon ring and its disk of infalling gas |
 | `src/components/Hero.tsx` | The intro stage, the PORTFOLIO title and the hero layout |
 | `src/components/ParticlePortrait.tsx` | The halftone star portrait: fly-in, cursor repel, scan sweep, scatter on scroll |
 | `src/three/voyage.ts` | The Projects voyage: planets, nebulae and galaxies per destination, the astronaut beside each planet, warp streaks, camera route |
@@ -62,7 +62,7 @@ Name the repository `En1gM-a.github.io` to serve the site at https://en1gm-a.git
 | `src/three/galaxy.ts` | The Three.js galaxy scene, camera path, warp and per-section dimming |
 | `src/three/props.ts` | The backdrop's life: astronaut placement and grab/throw physics, gas clouds, spiked stars, asteroids, satellite, shooting stars, dust |
 | `src/three/astronaut.ts`, `src/three/emu.ts` | The astronaut (NASA suit, tether, drift) and the loader that cleans up and shares the suit model |
-| `src/components/WarpJump.tsx`, `src/components/Supernova.tsx` | The hyperspace jump between sections and the Back to orbit supernova |
+| `src/components/WarpJump.tsx`, `src/components/BlackHole.tsx` | The hyperspace jump between sections and the Back to orbit black hole |
 | `src/components/GalaxyBackground.tsx` | Lazy-loads the galaxy, hides it during the voyage, falls back to `Starfield.tsx` without WebGL |
 | `src/components/fx/` | Shared interactions: 3D tilt, magnetic pull, count-up, targeting reticle |
 | `src/components/previews/` | Device frames and the animated project previews |

@@ -60,7 +60,7 @@ export function GalaxyBackground({ shown, arrived }: { shown: boolean; arrived: 
   if (fallback) return <Starfield visible={arrived} />
 
   return (
-    <motion.div aria-hidden className="pointer-events-none fixed inset-0 -z-10" style={{ opacity: galaxyBus.dim }}>
+    <motion.div aria-hidden data-backdrop className="pointer-events-none fixed inset-0 -z-10" style={{ opacity: galaxyBus.dim }}>
       <canvas
         ref={ref}
         className="absolute inset-0 transition-opacity duration-[1200ms] ease-out"

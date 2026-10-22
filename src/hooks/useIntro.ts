@@ -3,9 +3,9 @@ import { useReducedMotion } from "motion/react"
 import { bootReady } from "../boot"
 
 /**
- * Intro timeline, the Big Bang as cosmology tells it:
- * -1 the loader · 0 a hot seed, quantum flicker · 1 inflation, the universe glows and cools
- * 2 first light (the fog clears), KARL emerges · 3 the cosmic web forms, glitch-decrypt to PORTFOLIO
+ * Intro timeline, the Big Bang after NASA's visualisation of it:
+ * -1 the loader · 0 a violet point of light gathers · 1 it blooms, and the universe glows as an even fog
+ * 2 the fog thins, the first stars light up, KARL condenses · 3 the deep field, glitch-decrypt to PORTFOLIO
  * 4 the galaxy arrives + stars assemble the photo · 5 online
  */
 export const STAGE = { wait: -1, spark: 0, bang: 1, letters: 2, decrypt: 3, settle: 4, done: 5 } as const
