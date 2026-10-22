@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react"
 import {
   motion,
   useInView,
@@ -70,19 +70,46 @@ function StatusBadge({ status }: { status: Project["status"] }) {
   return null
 }
 
+// The mockups are laid out for a frame at least this wide; a narrower frame shows the same layout scaled down, never cropped
+const MOCKUP_WIDTH = 460
+
+function Fit({ children }: { children: ReactNode }) {
+  const ref = useRef<HTMLDivElement>(null)
+  const [width, setWidth] = useState(0)
+  useLayoutEffect(() => {
+    const el = ref.current
+    if (!el) return
+    setWidth(el.offsetWidth)
+    const ro = new ResizeObserver(() => setWidth(el.offsetWidth))
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
+  const s = width > 0 && width < MOCKUP_WIDTH ? width / MOCKUP_WIDTH : 1
+  return (
+    <div ref={ref} className="absolute inset-0">
+      <div
+        className="h-full w-full origin-top-left"
+        style={s < 1 ? { width: MOCKUP_WIDTH, height: (MOCKUP_WIDTH * 10) / 16, transform: `scale(${s})` } : undefined}
+      >
+        {children}
+      </div>
+    </div>
+  )
+}
+
 function Preview({ project }: { project: Project }) {
   const ref = useRef<HTMLDivElement>(null)
   const play = useInView(ref, { amount: 0.35 })
   const { bind, rotate, glare } = useTilt(8)
   return (
-    <div ref={ref} className="[perspective:1200px]" {...bind}>
+    <div ref={ref} className="@container [perspective:1200px]" {...bind}>
       <motion.div className="relative aspect-[16/10] w-full" style={{ ...rotate, transformStyle: "preserve-3d" }}>
-        <div className="absolute inset-0">
+        <Fit>
           <ProjectPreview kind={project.preview} play={play} />
-        </div>
+        </Fit>
         <motion.div aria-hidden className="pointer-events-none absolute inset-0 rounded-xl" style={{ background: glare }} />
         <span
-          className="label absolute -bottom-3 left-4 rounded-full border border-line bg-void/90 px-3 py-1.5 text-[10px]"
+          className="label absolute -bottom-3 left-4 rounded-full border border-line bg-void/90 px-3 py-1.5 text-[10px] whitespace-nowrap @max-[15rem]:-bottom-2 @max-[15rem]:left-2 @max-[15rem]:px-2 @max-[15rem]:py-1 @max-[15rem]:text-[8px]"
           style={{ transform: "translateZ(50px)" }}
         >
           {project.preview === "kuryentipid" ? "Live screenshot" : "Recreated preview"}
@@ -152,7 +179,7 @@ function Links({ project, className = "" }: { project: Project; className?: stri
   )
 }
 
-/** Phone version: what fits under the planet on a tall screen */
+/** Phone version: what fits under the planet on a tall screen (tighter on short ones, so the preview still fits) */
 function CompactDetails({ project }: { project: Project }) {
   return (
     <div className="flex flex-col">
@@ -162,12 +189,13 @@ function CompactDetails({ project }: { project: Project }) {
         </p>
         <StatusBadge status={project.status} />
       </div>
-      <h3 className="display mt-3 text-[clamp(30px,9vw,44px)]">{project.name}</h3>
-      <p className="mt-3 line-clamp-4 text-[15px] leading-relaxed text-dim">{project.summary}</p>
-      <div className="mt-5 w-[86%] max-w-sm [@media(max-height:700px)]:hidden">
+      <h3 className="display mt-3 text-[clamp(30px,9vw,44px)] short:mt-2 short:text-[clamp(26px,8vw,36px)]">{project.name}</h3>
+      <p className="mt-3 line-clamp-4 text-[15px] leading-relaxed text-dim short:mt-2 short:line-clamp-2 short:text-[14px]">{project.summary}</p>
+      {/* On short screens the preview takes the height left under the planet; with too little, it steps aside */}
+      <div className="mt-5 w-[86%] max-w-sm short:mt-3 short:w-[min(86%,calc((100svh_-_446px)_*_1.6))] [@media(max-height:535px)]:hidden">
         <Preview project={project} />
       </div>
-      <Links project={project} className="mt-6" />
+      <Links project={project} className="mt-6 short:mt-4" />
     </div>
   )
 }

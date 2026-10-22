@@ -1,5 +1,8 @@
 @import "tailwindcss";
 
+/* Phones with the browser's bars showing (most of them): the voyage's project card tightens up to keep its preview */
+@custom-variant short (@media (max-height: 700px));
+
 @theme {
   --font-display: "Archivo Variable", "Archivo", system-ui, sans-serif;
   --font-sans: "Archivo Variable", "Archivo", system-ui, sans-serif;
