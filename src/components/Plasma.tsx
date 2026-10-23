@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react"
 import { MAX_CLUMPS, type Clump } from "./cosmos"
+import { horizon } from "./hole"
 
 /**
  * The light of the opening, drawn by one fragment shader at low resolution
@@ -16,9 +17,9 @@ import { MAX_CLUMPS, type Clump } from "./cosmos"
  *
  * Black hole, for "Back to orbit": a shadow edged by its photon ring and a
  * tilted disk of infalling gas (white-hot at its inner edge, brighter on the
- * side turning toward us, its far side bent into view over the top) while the
- * dark spreads over the screen; then it shrinks to a violet point of light,
- * the singularity the intro starts from.
+ * side turning toward us, its far side bent into view over the top). It opens
+ * small, grows as it feeds and finally swells past every edge; in the dark it
+ * leaves, a violet point of light appears, the singularity the intro starts from.
  * Without WebGL 2 it draws nothing and the particles carry the moment.
  */
 
@@ -34,6 +35,8 @@ uniform vec2 uOrigin;
 uniform float uPre;
 uniform float uT;
 uniform float uKind;
+// The black hole's horizon, in units of the screen's shorter side (from hole.ts)
+uniform float uHole;
 // Protoclusters (x, y in screen heights from the centre, mass, ignition time), from cosmos.ts
 uniform vec4 uClumps[12];
 uniform int uClumpCount;
@@ -121,13 +124,13 @@ void main() {
       col += vec3(0.5, 0.66, 1.0) * front * (1.0 - ionized) * 0.18 * glow * keep;
     }
   } else {
-    // A black hole opens here and takes everything, then shrinks to a point of light
+    // A black hole opens here, small, and grows as it takes everything until it swallows the view
     float t = max(uT, 0.0);
-    // Sized by the screen's shorter side, so on a phone the disk still fits across
-    float R = 0.085 * min(1.0, uRes.x / uRes.y) * smoothstep(0.0, 0.7, t) * (1.0 - smoothstep(1.7, 2.25, t));
+    // Measured on the screen's shorter side, so on a phone the disk still fits across
+    float R = uHole * min(1.0, uRes.x / uRes.y);
     float iR = 1.0 / max(R, 0.0005);
     float shadow = 1.0 - smoothstep(R * 0.92, R * 1.02 + 0.0005, r);
-    float lit = smoothstep(0.15, 0.8, t) * (1.0 - smoothstep(1.55, 2.1, t));
+    float lit = smoothstep(0.05, 0.5, t) * (1.0 - smoothstep(1.85, 2.2, t));
     // Its disk of infalling gas, tilted toward us: turning faster the closer in, white-hot at the inner edge
     vec2 dp = vec2(p.x, p.y / 0.24);
     float d = length(dp);
@@ -153,9 +156,9 @@ void main() {
     col *= lit;
     // The dark spreads: around the hole first, then over everything once it has all fallen in
     float near = (1.0 - smoothstep(R, R * 6.0 + 0.001, r)) * 0.5 * smoothstep(0.0, 0.7, t);
-    dark = max(shadow, max(near, smoothstep(1.45, 1.9, t)));
-    // What is left is a point of light: the singularity the Big Bang starts from
-    col += vec3(0.62, 0.46, 1.0) * (0.00005 / (r * r + 0.0002)) * smoothstep(1.8, 2.25, t);
+    dark = max(shadow, max(near, smoothstep(1.55, 1.95, t)));
+    // In the dark it leaves, a point of light: the singularity the Big Bang starts from
+    col += vec3(0.62, 0.46, 1.0) * (0.00005 / (r * r + 0.0002)) * smoothstep(1.95, 2.3, t);
   }
   float alpha = clamp(max(max(col.r, max(col.g, col.b)), dark), 0.0, 1.0);
   o = vec4(min(col, vec3(alpha)), alpha);
@@ -208,6 +211,7 @@ export function Plasma({
     let uOrigin: WebGLUniformLocation | null = null
     let uPre: WebGLUniformLocation | null = null
     let uT: WebGLUniformLocation | null = null
+    let uHole: WebGLUniformLocation | null = null
     let linked = false
     let broken = false
     // Once linked: bind the program, its quad and its uniforms
@@ -222,6 +226,7 @@ export function Plasma({
       uOrigin = u("uOrigin")
       uPre = u("uPre")
       uT = u("uT")
+      uHole = u("uHole")
       gl.uniform1f(u("uKind"), kind === "blackhole" ? 1 : 0)
       const list = clumps.slice(0, MAX_CLUMPS)
       const packed = new Float32Array(MAX_CLUMPS * 4)
@@ -266,6 +271,7 @@ export function Plasma({
       const t = bangAt ? (now - bangAt) / 1000 : -1
       gl.uniform1f(uPre, (now - start) / 1000)
       gl.uniform1f(uT, t)
+      if (kind === "blackhole") gl.uniform1f(uHole, horizon(Math.max(0, t)))
       gl.clearColor(0, 0, 0, 0)
       gl.clear(gl.COLOR_BUFFER_BIT)
       gl.drawArrays(gl.TRIANGLES, 0, 3)

@@ -2,10 +2,9 @@ import { useEffect, useRef, useState } from "react"
 import { motion } from "motion/react"
 import { BigBang } from "./BigBang"
 import { Plasma } from "./Plasma"
+import { PULL, PULL_FROM } from "./hole"
 
-const PULL_FROM = 150 // ms: the hole has opened enough to start taking the page
-const PULL = 1500 // ms: the page spirals in, slowly at first, then all at once
-const BLACKOUT_AT = 2300 // ms: everything is gone and the hole has shrunk to a point; safe to jump to the top and restart
+const BLACKOUT_AT = 2300 // ms: the hole has swallowed everything, the view included; safe to jump to the top and restart
 const REVEAL_AT = BLACKOUT_AT + 250 // ms: the intro has taken over underneath, so the dark can lift
 const DONE_AT = REVEAL_AT + 650
 
@@ -26,7 +25,8 @@ function pull() {
         { transform: "rotate(50deg) scale(0.7)", opacity: 1, offset: 0.55 },
         { transform: "rotate(260deg) scale(0)", opacity: 0 },
       ],
-      { delay: PULL_FROM, duration: PULL, easing: "cubic-bezier(0.32, 0, 0.67, 0)", fill: "forwards" },
+      // The page spirals in slowly at first, then all at once, while the hole grows on the same curve
+      { delay: PULL_FROM * 1000, duration: PULL * 1000, easing: "cubic-bezier(0.32, 0, 0.67, 0)", fill: "forwards" },
     )
     restore.push(() => {
       fall.cancel()
@@ -38,12 +38,13 @@ function pull() {
 }
 
 /**
- * "Back to orbit": a black hole opens at the centre of the screen and takes
- * everything. The page, the nav and the sky spiral in, slowly and then all at
- * once, while stars and dust stream in around them, heating as they near the
- * horizon. With nothing left, the hole shrinks to a violet point of light,
- * the singularity the Big Bang intro starts from, so the intro picks up from
- * that same point.
+ * "Back to orbit": a small black hole opens at the centre of the screen and
+ * grows as it takes everything. The page, the nav and the sky spiral in,
+ * slowly and then all at once, while stars and dust stream in around them,
+ * heating as they near the horizon. With nothing left, the horizon swells past
+ * every edge and swallows the view; in the dark, a violet point of light
+ * appears, the singularity the Big Bang intro starts from, so the intro picks
+ * up from that same point.
  */
 export function BlackHole({ onBlackout, onDone }: { onBlackout: () => void; onDone: () => void }) {
   const handlers = useRef({ onBlackout, onDone })

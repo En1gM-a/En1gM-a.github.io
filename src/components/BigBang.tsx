@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react"
 import { drift, makeClumps, type Clump } from "./cosmos"
+import { horizon } from "./hole"
 
 /** A line to draw this frame: from (px, py) to (tx, ty) */
 type Seg = { px: number; py: number; tx: number; ty: number; size: number; alpha: number }
@@ -306,8 +307,6 @@ export function BigBang({
         })
       }
     }
-    // The horizon's radius in px, as the shader draws it: it opens, holds, then shrinks to a point
-    const horizon = (t: number) => 0.085 * Math.min(w, h) * smooth(0, 0.7, t) * (1 - smooth(1.7, 2.25, t))
 
     // One list per colour, so each colour is set once per frame
     const palette = mode === "cosmos" ? TONES : [...HEAT, ...TONES]
@@ -391,7 +390,8 @@ export function BigBang({
           groups[s.tone].push(s)
         }
       } else if (mode === "infall" && t >= 0) {
-        const R = horizon(t)
+        // The horizon in px, as the shader draws it: small at first, growing as it feeds, then sweeping past the edges
+        const R = horizon(t) * unit
         for (const m of infall) {
           const u = (t - m.delay) / m.dur
           if (u <= 0 || u >= 1) continue
