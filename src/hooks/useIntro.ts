@@ -10,8 +10,11 @@ import { bootReady } from "../boot"
  */
 export const STAGE = { wait: -1, spark: 0, bang: 1, letters: 2, decrypt: 3, settle: 4, done: 5 } as const
 
+/** ms from the intro's start (the singularity) to the bang */
+export const BANG_AT = 1150
+
 const TIMELINE: [number, number][] = [
-  [STAGE.bang, 1150],
+  [STAGE.bang, BANG_AT],
   [STAGE.letters, 2000],
   [STAGE.decrypt, 3000],
   [STAGE.settle, 3950],

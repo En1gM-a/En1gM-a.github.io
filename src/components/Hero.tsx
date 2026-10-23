@@ -2,9 +2,10 @@ import { useEffect, useRef, useState } from "react"
 import { AnimatePresence, motion, useReducedMotion, useScroll, useTransform } from "motion/react"
 import { BigBang } from "./BigBang"
 import { Plasma } from "./Plasma"
+import { makeClumps } from "./cosmos"
 import { ParticlePortrait } from "./ParticlePortrait"
 import { ArrowDown } from "./icons"
-import { STAGE } from "../hooks/useIntro"
+import { BANG_AT, STAGE } from "../hooks/useIntro"
 import { useScramble } from "../hooks/useScramble"
 import { profile } from "../data/content"
 
@@ -26,13 +27,83 @@ const LOG: [number, string, string][] = [
   [STAGE.settle, "access", "granted"],
 ]
 
+// Cosmic time and temperature as the intro plays, by seconds after the bang: [s, log10 seconds, log10 kelvin].
+// The Planck epoch, inflation, the fog clearing (380 000 years), the first galaxies (a billion years), today
+const CLOCK: [number, number, number][] = [
+  [-1.15, -43, 32],
+  [0, -36, 28],
+  [0.3, -32, 27],
+  [0.9, 13.08, 3.48],
+  [1.6, 16.5, 1.29],
+  [2.8, 17.64, 0.435],
+]
+const YEAR = 3.156e7
+const SUPER = "⁰¹²³⁴⁵⁶⁷⁸⁹"
+const power = (n: number) => `10${String(n).replace("-", "⁻").replace(/\d/g, (d) => SUPER[Number(d)])}`
+
+function cosmicClock(t: number): [number, number] {
+  let i = 0
+  while (i < CLOCK.length - 2 && t > CLOCK[i + 1][0]) i++
+  const [t0, s0, k0] = CLOCK[i]
+  const [t1, s1, k1] = CLOCK[i + 1]
+  const f = Math.min(1, Math.max(0, (t - t0) / (t1 - t0)))
+  return [s0 + (s1 - s0) * f, k0 + (k1 - k0) * f]
+}
+
+function formatTime(logS: number) {
+  const years = 10 ** logS / YEAR
+  if (years < 1) return `${power(Math.round(logS))} s`
+  if (years < 1e3) return `${Math.round(years)} yr`
+  if (years < 1e6) return `${Math.round(years / 1e3)} 000 yr`
+  if (years < 1e9) return `${Math.round(years / 1e6)} million yr`
+  return `${(years / 1e9).toFixed(1)} billion yr`
+}
+
+function formatTemp(logK: number) {
+  const k = 10 ** logK
+  if (k >= 1e4) return `${power(Math.round(logK))} K`
+  if (k >= 9.95) return `${Number(k.toPrecision(2))} K`
+  return `${k.toFixed(1)} K`
+}
+
 function IntroStage({ stage, onSkip }: { stage: number; onSkip: () => void }) {
   const banged = stage >= STAGE.bang
+  // Where the first stars will ignite: the shader clears the fog there, the particles light the stars
+  const [clumps] = useState(() => makeClumps(window.innerWidth, window.innerHeight))
+  const clockRef = useRef<HTMLSpanElement>(null)
+  const heatRef = useRef<HTMLSpanElement>(null)
+  // The clock keeps time with the bang itself, as the shader and the particles do
+  const bangedAt = useRef(0)
+  useEffect(() => {
+    if (banged && !bangedAt.current) bangedAt.current = performance.now()
+  }, [banged])
+
+  // The cosmic clock, written straight to the page, so it costs no renders
+  useEffect(() => {
+    const start = performance.now()
+    let raf = 0
+    let shown = ""
+    const tick = (now: number) => {
+      // Before the bang it counts towards it, but never past it
+      const t = bangedAt.current ? (now - bangedAt.current) / 1000 : Math.min(0, (now - start - BANG_AT) / 1000)
+      const [logS, logK] = cosmicClock(t)
+      const time = formatTime(logS)
+      const temp = formatTemp(logK)
+      if (time + temp !== shown && clockRef.current && heatRef.current) {
+        clockRef.current.textContent = time
+        heatRef.current.textContent = temp
+        shown = time + temp
+      }
+      raf = requestAnimationFrame(tick)
+    }
+    raf = requestAnimationFrame(tick)
+    return () => cancelAnimationFrame(raf)
+  }, [])
 
   return (
     <motion.div className="fixed inset-0 z-40 flex items-center justify-center" onPointerDown={onSkip}>
-      <Plasma bang={banged} />
-      <BigBang bang={banged} />
+      <Plasma bang={banged} clumps={clumps} />
+      <BigBang bang={banged} clumps={clumps} />
 
       {/* The singularity: a violet point of light gathering calmly, then blooming into the glow that fills everything */}
       <motion.span
@@ -77,7 +148,16 @@ function IntroStage({ stage, onSkip }: { stage: number; onSkip: () => void }) {
       )}
 
       {/* Mission log, typed in as each beat lands; every line keeps its slot so nothing shifts */}
-      <ul aria-hidden className="label absolute bottom-7 left-[var(--gutter)] space-y-1.5 text-[10px] sm:text-[11px]">
+      {/* On phones it sits above the skip button, which would otherwise cut into its right-hand column */}
+      <ul aria-hidden className="label absolute bottom-20 left-[var(--gutter)] space-y-1.5 text-[10px] sm:bottom-7 sm:text-[11px]">
+        <li className="flex gap-3">
+          <span className="w-28 shrink-0 whitespace-nowrap text-faint">cosmic time</span>
+          <span ref={clockRef} className="text-ink normal-case tabular-nums" />
+        </li>
+        <li className="flex gap-3 pb-1.5">
+          <span className="w-28 shrink-0 whitespace-nowrap text-faint">temperature</span>
+          <span ref={heatRef} className="text-ink normal-case tabular-nums" />
+        </li>
         {LOG.map(([at, k, v]) => (
           <motion.li
             key={k}
@@ -86,7 +166,7 @@ function IntroStage({ stage, onSkip }: { stage: number; onSkip: () => void }) {
             animate={stage >= at ? { opacity: 1, x: 0 } : undefined}
             transition={{ duration: 0.25 }}
           >
-            <span className="w-24 text-faint">{k}</span>
+            <span className="w-28 shrink-0 whitespace-nowrap text-faint">{k}</span>
             <span className={v === "granted" ? "text-signal" : "text-cyan"}>{v}</span>
           </motion.li>
         ))}
