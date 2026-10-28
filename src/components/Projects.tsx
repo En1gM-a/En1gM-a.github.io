@@ -14,10 +14,7 @@ import { ArrowUpRight, GitHubIcon } from "./icons"
 import { ProjectPreview } from "./previews"
 import { useTilt } from "./fx/useTilt"
 import { galaxyBus } from "../three/bus"
-import { bootReady } from "../boot"
-
-// The planets bake once the intro has played (it runs about 4.5 s after the loader lets go)
-const afterIntro = bootReady.then(() => new Promise((r) => window.setTimeout(r, 4800)))
+import { bootDone } from "../boot"
 import type { Voyage as VoyageScene } from "../three/voyage"
 import { archive, profile, projects, type Project } from "../data/content"
 
@@ -325,10 +322,12 @@ function Voyage({ wide }: { wide: boolean }) {
           mobile: !wide,
           tall: !wide,
           read: () => ({ p: route.get(), warp: warp.get(), entry: entry.get() }),
-          bakeAfter: afterIntro,
+          onReady: () => bootDone("voyage"),
         })
+        // Without WebGL there is nothing to wait for
+        if (!scene) bootDone("voyage")
       })
-      .catch(() => {})
+      .catch(() => bootDone("voyage"))
     return () => {
       cancelled = true
       scene?.dispose()
@@ -463,6 +462,10 @@ export function Projects() {
   const reduce = useReducedMotion()
   const desktop = useDesktop()
   const voyage = !reduce
+  // The plain list has no shaders for the loader to wait on
+  useEffect(() => {
+    if (!voyage) bootDone("voyage")
+  }, [voyage])
   const live = projects.filter((p) => p.status === "live").length
   const wip = projects.filter((p) => p.status === "wip").length
 

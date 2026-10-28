@@ -159,7 +159,7 @@ export function createVoyage(
     read,
     mobile,
     tall,
-    bakeAfter,
+    onReady,
   }: {
     palettes: Palette[]
     read: () => VoyageState
@@ -167,8 +167,8 @@ export function createVoyage(
     mobile: boolean
     /** Portrait screens: each planet looms at the top, the project sits below it */
     tall: boolean
-    /** Hold the surface bakes (GPU passes) until this settles, e.g. until the intro has played */
-    bakeAfter?: Promise<unknown>
+    /** Called once every shader has compiled and every surface has baked (the loader waits for it) */
+    onReady?: () => void
   },
 ): Voyage | null {
   let renderer: THREE.WebGLRenderer
@@ -337,24 +337,24 @@ export function createVoyage(
   let stopped = false
   const nextFrame = () => (hurry ? Promise.resolve() : new Promise<void>((r) => requestAnimationFrame(() => r())))
   const bakeAll = async () => {
-    // Shaders compile off the main thread now; the bakes themselves wait until the intro has played
+    // Everything compiles and bakes up front, while the loader is up: on a first visit a heavy compile (and the
+    // first draw into each bake target) can hold the page still for seconds, which after the intro would land
+    // right in the hand-over to the home page
     const compiled = renderer.compileAsync(scene, camera).catch(() => {})
-    await Promise.all([baker.ready, bakeAfter])
+    const clouds = nebulae.length ? bakeNebulae(renderer, nebulaPalettes, 512) : Promise.resolve([])
+    await Promise.all([compiled, baker.ready, clouds])
+    const targets = await clouds
     for (let i = 0; i < palettes.length; i++) {
-      if (stopped) return
+      if (stopped) return targets.forEach((t) => t.dispose())
       baker.bake(looks[i], palettes[i], i)
       await nextFrame()
     }
-    if (nebulae.length && !stopped) {
-      const targets = await bakeNebulae(renderer, nebulaPalettes, 512)
-      if (stopped) return targets.forEach((t) => t.dispose())
-      nebulaTargets = targets
-      nebulae.forEach((nb, i) => (nb.mat.uniforms.uMap.value = targets[i].texture))
-    }
-    // Display shaders compiled in the background; one warm-up frame uploads everything to the GPU
-    await compiled
-    if (stopped) return
+    if (stopped) return targets.forEach((t) => t.dispose())
+    nebulaTargets = targets
+    nebulae.forEach((nb, i) => (nb.mat.uniforms.uMap.value = targets[i].texture))
+    // One warm-up frame uploads everything to the GPU
     render(performance.now())
+    onReady?.()
   }
   bakeAll()
   const flushBakes = () => {

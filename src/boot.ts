@@ -5,13 +5,15 @@
  * hands over to the intro, so none of it lands mid-animation. Past MAX_WAIT the
  * intro starts anyway, and late pieces fade in afterwards.
  */
-export type BootTask = "fonts" | "portrait" | "galaxy" | "suit"
+export type BootTask = "fonts" | "portrait" | "galaxy" | "suit" | "voyage"
 
 const TASKS: Record<BootTask, { label: string; weight: number }> = {
   fonts: { label: "Syncing typefaces", weight: 1 },
   portrait: { label: "Calibrating the portrait", weight: 1 },
   galaxy: { label: "Charting the galaxy", weight: 3 },
   suit: { label: "Suiting up the astronaut", weight: 3 },
+  // The project planets' shaders: on a first visit their compile can hold the page still for seconds
+  voyage: { label: "Plotting the voyage", weight: 2 },
 }
 const ORDER = Object.keys(TASKS) as BootTask[]
 const TOTAL = ORDER.reduce((s, t) => s + TASKS[t].weight, 0)
