@@ -23,10 +23,10 @@ function pull() {
     const fall = el.animate(
       [
         { transform: "rotate(0deg) scale(1)", opacity: 1 },
-        { transform: "rotate(50deg) scale(0.7)", opacity: 1, offset: 0.55 },
-        { transform: "rotate(260deg) scale(0)", opacity: 0 },
+        { transform: "rotate(16deg) scale(1.35)", opacity: 1, offset: 0.5 },
+        { transform: "rotate(75deg) scale(3.4)", opacity: 0 },
       ],
-      // The page spirals in slowly at first, then all at once, while the hole grows on the same curve
+      // The viewer is pulled in, so the page rushes outward past them, twisting, slowly at first, then all at once
       { delay: PULL_FROM * 1000, duration: PULL * 1000, easing: "cubic-bezier(0.32, 0, 0.67, 0)", fill: "forwards" },
     )
     restore.push(() => {
@@ -40,10 +40,10 @@ function pull() {
 
 /**
  * "Back to orbit": a small black hole opens at the centre of the screen and
- * grows as it takes everything. The page, the nav and the sky spiral in,
- * slowly and then all at once, while stars and dust stream in around them,
- * heating as they near the horizon. With nothing left, the horizon swells past
- * every edge and swallows the view; in the dark, a violet point of light
+ * pulls the viewer in. It looms faster and faster as they fall; the page, the
+ * nav and the sky rush outward past them, twisting, while streaks of starlight
+ * stream past like a warp and the view rolls as they spiral. Then they cross
+ * the horizon and the dark swallows everything; in it a violet point of light
  * appears, the singularity the Big Bang intro starts from, so the intro picks
  * up from that same point.
  */

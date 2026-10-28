@@ -14,7 +14,7 @@ type Galaxy = { qx: number; qy: number; z: number; born: number; size: number; t
 /** One of the first stars: where it sits, when it switches on, how wide its glow */
 type FirstStar = { qx: number; qy: number; ignite: number; size: number }
 
-/** Matter falling into the black hole: where it starts, when, how long it takes to reach the horizon, how it swirls */
+/** Starlight rushing past someone falling into the black hole: where it starts, when, how long it takes to pass, how it swirls */
 type Infaller = Seg & { r0: number; th0: number; delay: number; dur: number; spin: number; tone: number; drawn: boolean }
 
 // Matter heating as it nears the black hole: dull red → orange → yellow → white → blue-white
@@ -123,9 +123,10 @@ function edgeOnSprite() {
  * large and drifting out faster, and faint arcs of lensed light around the
  * heaviest cluster. Nothing twinkles; that's air, and there is none out here.
  *
- * "infall" is for the black hole behind "Back to orbit": stars and dust all
- * around spiral in, faster and faster, heating from white starlight to orange
- * and then white-hot as they near the horizon, where they vanish.
+ * "infall" is for the black hole behind "Back to orbit", seen by someone
+ * falling in: starlight streams outward past them like a warp, faster and
+ * faster, swirling with the hole's spin, glowing orange to white-hot close to
+ * the horizon.
  */
 export function BigBang({
   bang,
@@ -284,7 +285,7 @@ export function BigBang({
         arcs.push({ r: unit * (0.045 + Math.random() * 0.035), a0: Math.random() * Math.PI * 2, span: 0.35 + Math.random() * 0.35, width: 1 + Math.random() * 0.8 })
     }
 
-    // ------------------------------------------------------------ infall: everything spiralling into the black hole
+    // ------------------------------------------------------------ infall: starlight rushing past the viewer falling in
     const infall: Infaller[] = []
     if (mode === "infall") {
       const reach = Math.hypot(Math.max(cx, w - cx), Math.max(cy, h - cy)) * 1.05
@@ -395,10 +396,11 @@ export function BigBang({
         for (const m of infall) {
           const u = (t - m.delay) / m.dur
           if (u <= 0 || u >= 1) continue
-          // Slow at first, then faster and faster; the closer in, the faster it turns (a tightening spiral)
-          const r = m.r0 * (1 - u * u)
-          if (r <= R * 0.95) continue
-          const th = m.th0 + m.spin * Math.log(m.r0 / Math.max(r, 1))
+          // The viewer falls toward the hole, so everything ahead rushes outward past them: nearer looks farther
+          // out (perspective), faster and faster, swirling with the hole's spin; it shows once clear of the horizon
+          const r = (m.r0 * 0.25) / (1 - u * 0.97)
+          if (r <= R * 1.05) continue
+          const th = m.th0 + m.spin * u * u * 2.2
           const x = cx + Math.cos(th) * r
           const y = cy + Math.sin(th) * r
           // Each frame draws the path since the last one, so the streaks lengthen as it speeds up

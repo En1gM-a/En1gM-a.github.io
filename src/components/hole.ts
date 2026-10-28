@@ -1,7 +1,7 @@
 /**
- * The black hole behind "Back to orbit", shared by its shader and its infalling particles so they agree.
- * It opens small, grows as it swallows the page (on the same accelerating curve as the page's fall),
- * then swells past every edge of the screen, taking the view with it.
+ * The black hole behind "Back to orbit", shared by its shader and its streaks so they agree.
+ * Seen by someone falling into it: it opens small, looms faster and faster as they're pulled in,
+ * then swells past every edge of the screen as they cross the horizon.
  */
 
 /** When the page starts to fall in, and how long it takes (s after the hole opens) */
@@ -15,7 +15,7 @@ const smooth = (a: number, b: number, v: number) => {
 
 /** The horizon's radius t seconds after the hole opens, in units of the screen's shorter side */
 export function horizon(t: number) {
-  const fed = Math.min(1, Math.max(0, (t - PULL_FROM) / PULL)) ** 3
-  const engulf = smooth(PULL_FROM + PULL - 0.03, PULL_FROM + PULL + 0.4, t)
-  return 0.022 * smooth(0, 0.35, t) + 0.1 * fed + 1.6 * engulf * engulf
+  // Falling toward it, it grows the way anything ahead does: slowly, then all at once
+  const engulf = smooth(PULL_FROM + PULL, PULL_FROM + PULL + 0.4, t)
+  return 0.02 * smooth(0, 0.25, t) * Math.exp(t * 1.85) + 1.4 * engulf * engulf
 }

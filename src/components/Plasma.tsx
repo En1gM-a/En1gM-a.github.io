@@ -132,7 +132,10 @@ void main() {
     float shadow = 1.0 - smoothstep(R * 0.92, R * 1.02 + 0.0005, r);
     float lit = smoothstep(0.05, 0.5, t) * (1.0 - smoothstep(1.85, 2.2, t));
     // Its disk of infalling gas, tilted toward us: turning faster the closer in, white-hot at the inner edge
-    vec2 dp = vec2(p.x, p.y / 0.24);
+    // The viewer spirals as they fall, so the whole view rolls, faster and faster
+    float roll = 0.25 * t * t;
+    vec2 pr = mat2(cos(roll), -sin(roll), sin(roll), cos(roll)) * p;
+    vec2 dp = vec2(pr.x, pr.y / 0.24);
     float d = length(dp);
     float u = d * iR;
     float a = t * 3.2 / pow(max(u, 1.0), 1.5);
@@ -143,12 +146,12 @@ void main() {
     hot = mix(hot, vec3(1.0, 0.96, 0.9), smoothstep(0.45, 1.0, heat));
     // The side turning toward us is beamed brighter; the far half passes behind the shadow
     float beam = 1.0 + 0.6 * dp.x / max(d, 0.0001);
-    float behind = (1.0 - smoothstep(-0.003, 0.003, p.y)) * shadow;
+    float behind = (1.0 - smoothstep(-0.003, 0.003, pr.y)) * shadow;
     col = hot * band * (0.35 + 1.1 * gas) * beam * (1.0 - behind);
     // Light from the far side, bent over the top and under the bottom of the shadow
     float zb = (r - R * 1.42) / (R * 0.2 + 0.0001);
     float a2 = t * 2.4;
-    float arc = fbm(mat2(cos(a2), -sin(a2), sin(a2), cos(a2)) * p * iR * 1.4 + 3.0);
+    float arc = fbm(mat2(cos(a2), -sin(a2), sin(a2), cos(a2)) * pr * iR * 1.4 + 3.0);
     col += vec3(1.0, 0.7, 0.36) * exp(-zb * zb) * (1.0 - shadow) * (0.35 + 0.8 * arc);
     // The photon ring, hugging the edge of the shadow
     float zr = (r - R * 1.05) / (R * 0.04 + 0.0001);
