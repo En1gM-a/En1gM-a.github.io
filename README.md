@@ -9,7 +9,7 @@ Personal portfolio for Karl Adrian Bensi, BSCpE student and full stack developer
 - **Navigation** — nav links jump through hyperspace instead of scrolling past every section, and "Back to orbit" opens a small black hole that grows as it pulls in the page, the nav and the sky until it swallows the view; the Big Bang replays from the point of light left in the dark.
 - **Sections** — a scroll word-reveal and a crew ID card that tilts and flips (About), an interactive orbital system plus a tech ticker (Skills), a scroll-driven voyage where every project is its own planet and you warp between them (Projects): living worlds with oceans, drifting clouds and city lights at night, gas giants with storms, zonal winds and lightning, a molten world with glowing rifts, each in its own Hubble-palette nebula with its galaxy overhead, and a magnetic email button that sends the galaxy into warp (Contact).
 
-Built with React, Vite, Tailwind CSS, [Motion](https://motion.dev) and [Three.js](https://threejs.org).
+Built with React, Vite, Tailwind CSS, [Motion](https://motion.dev), [Three.js](https://threejs.org) and [Lenis](https://lenis.darkroom.engineering) for smooth wheel scrolling.
 
 ## Run locally
 

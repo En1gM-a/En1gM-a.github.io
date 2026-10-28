@@ -3,6 +3,7 @@ import { motion } from "motion/react"
 import { BigBang } from "./BigBang"
 import { Plasma } from "./Plasma"
 import { PULL, PULL_FROM } from "./hole"
+import { holdScroll } from "../smoothScroll"
 
 const BLACKOUT_AT = 2300 // ms: the hole has swallowed everything, the view included; safe to jump to the top and restart
 const REVEAL_AT = BLACKOUT_AT + 250 // ms: the intro has taken over underneath, so the dark can lift
@@ -53,7 +54,8 @@ export function BlackHole({ onBlackout, onDone }: { onBlackout: () => void; onDo
 
   useEffect(() => {
     const release = pull()
-    // Nothing scrolls while it falls in
+    // Nothing scrolls while it falls in (the smooth scroller is told too, since it ignores prevented wheels)
+    holdScroll(true)
     const hold = (e: Event) => e.preventDefault()
     window.addEventListener("wheel", hold, { passive: false })
     window.addEventListener("touchmove", hold, { passive: false })
@@ -69,6 +71,7 @@ export function BlackHole({ onBlackout, onDone }: { onBlackout: () => void; onDo
       window.clearTimeout(c)
       window.removeEventListener("wheel", hold)
       window.removeEventListener("touchmove", hold)
+      holdScroll(false)
       release()
     }
   }, [])

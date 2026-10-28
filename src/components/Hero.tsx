@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react"
-import { AnimatePresence, motion, useReducedMotion, useScroll, useSpring, useTransform } from "motion/react"
+import { AnimatePresence, motion, useReducedMotion, useScroll, useTransform } from "motion/react"
 import { BigBang } from "./BigBang"
 import { Plasma } from "./Plasma"
 import { makeClumps } from "./cosmos"
@@ -192,10 +192,8 @@ export function Hero({ stage, skipped, onSkip }: { stage: number; skipped: boole
   const ref = useRef<HTMLElement>(null)
   const reduce = useReducedMotion()
   const { scrollYProgress } = useScroll({ target: ref, offset: ["start start", "end start"] })
-  // Spring-smoothed, so the parallax glides instead of stepping with each wheel notch
-  const leave = useSpring(scrollYProgress, { stiffness: 100, damping: 30, restDelta: 0.001 })
-  const y = useTransform(leave, [0, 1], [0, -140])
-  const opacity = useTransform(leave, [0, 0.75], [1, 0])
+  const y = useTransform(scrollYProgress, [0, 1], [0, -140])
+  const opacity = useTransform(scrollYProgress, [0, 0.75], [1, 0])
   const online = stage >= STAGE.done
   const settled = stage >= STAGE.settle
   const text = useScramble(NAME, WORD, stage >= STAGE.decrypt, 950)

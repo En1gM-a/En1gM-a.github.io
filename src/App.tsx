@@ -1,4 +1,4 @@
-import { useState, type MouseEvent } from "react"
+import { useEffect, useState, type MouseEvent } from "react"
 import { MotionConfig, motion, useReducedMotion, useScroll, useSpring } from "motion/react"
 import { GalaxyBackground } from "./components/GalaxyBackground"
 import { Nav } from "./components/Nav"
@@ -12,6 +12,7 @@ import { BlackHole } from "./components/BlackHole"
 import { WarpJump } from "./components/WarpJump"
 import { STAGE, useIntro } from "./hooks/useIntro"
 import { profile } from "./data/content"
+import { startSmoothScroll } from "./smoothScroll"
 
 function ScrollProgress() {
   const { scrollYProgress } = useScroll()
@@ -30,6 +31,8 @@ export default function App() {
   const online = stage >= STAGE.done
   const reduce = useReducedMotion()
   const [falling, setFalling] = useState(false)
+  // Smooth (inertial) wheel scrolling, except with reduced motion
+  useEffect(() => (reduce ? undefined : startSmoothScroll()), [reduce])
 
   // "Back to orbit": a black hole takes the page and the Big Bang replays from its singularity (a plain jump with reduced motion)
   const backToOrbit = (e: MouseEvent<HTMLAnchorElement>) => {
