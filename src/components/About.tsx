@@ -1,5 +1,5 @@
 import { useRef, useState } from "react"
-import { motion, useReducedMotion, useScroll, useTransform, type MotionValue } from "motion/react"
+import { motion, useReducedMotion, useScroll, useSpring, useTransform, type MotionValue } from "motion/react"
 import { SectionHeading, reveal } from "./SectionHeading"
 import { Counter } from "./fx/Counter"
 import { useTilt } from "./fx/useTilt"
@@ -37,6 +37,8 @@ function Statement() {
   const ref = useRef<HTMLParagraphElement>(null)
   const reduce = useReducedMotion()
   const { scrollYProgress } = useScroll({ target: ref, offset: ["start 0.9", "end 0.5"] })
+  // Spring-smoothed, so the words light up in a glide rather than a step per wheel notch
+  const progress = useSpring(scrollYProgress, { stiffness: 100, damping: 30, restDelta: 0.001 })
   const words = profile.statement.split(" ")
   return (
     <p ref={ref} className="max-w-5xl text-[clamp(30px,5.2vw,68px)] leading-[1.08] font-bold tracking-tight">
@@ -46,7 +48,7 @@ function Statement() {
         : words.map((w, i) => {
             const start = (i / words.length) * 0.85
             return (
-              <Word key={i} progress={scrollYProgress} range={[start, start + 0.15]}>
+              <Word key={i} progress={progress} range={[start, start + 0.15]}>
                 {w}
               </Word>
             )

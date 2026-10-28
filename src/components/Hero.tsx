@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react"
-import { AnimatePresence, motion, useReducedMotion, useScroll, useTransform } from "motion/react"
+import { AnimatePresence, motion, useReducedMotion, useScroll, useSpring, useTransform } from "motion/react"
 import { BigBang } from "./BigBang"
 import { Plasma } from "./Plasma"
 import { makeClumps } from "./cosmos"
@@ -101,7 +101,12 @@ function IntroStage({ stage, onSkip }: { stage: number; onSkip: () => void }) {
   }, [])
 
   return (
-    <motion.div className="fixed inset-0 z-40 flex items-center justify-center" onPointerDown={onSkip}>
+    <motion.div
+      className="fixed inset-0 z-40 flex items-center justify-center"
+      onPointerDown={onSkip}
+      // Fades away as the page arrives (or on skip) instead of vanishing in one frame
+      exit={{ opacity: 0, transition: { duration: 0.6, ease: [0.16, 1, 0.3, 1] } }}
+    >
       <Plasma bang={banged} clumps={clumps} />
       <BigBang bang={banged} clumps={clumps} />
 
@@ -187,8 +192,10 @@ export function Hero({ stage, skipped, onSkip }: { stage: number; skipped: boole
   const ref = useRef<HTMLElement>(null)
   const reduce = useReducedMotion()
   const { scrollYProgress } = useScroll({ target: ref, offset: ["start start", "end start"] })
-  const y = useTransform(scrollYProgress, [0, 1], [0, -140])
-  const opacity = useTransform(scrollYProgress, [0, 0.75], [1, 0])
+  // Spring-smoothed, so the parallax glides instead of stepping with each wheel notch
+  const leave = useSpring(scrollYProgress, { stiffness: 100, damping: 30, restDelta: 0.001 })
+  const y = useTransform(leave, [0, 1], [0, -140])
+  const opacity = useTransform(leave, [0, 0.75], [1, 0])
   const online = stage >= STAGE.done
   const settled = stage >= STAGE.settle
   const text = useScramble(NAME, WORD, stage >= STAGE.decrypt, 950)
@@ -229,7 +236,7 @@ export function Hero({ stage, skipped, onSkip }: { stage: number; skipped: boole
         )}
       </AnimatePresence>
 
-      {stage >= STAGE.spark && stage < STAGE.settle && <IntroStage stage={stage} onSkip={onSkip} />}
+      <AnimatePresence>{stage >= STAGE.spark && stage < STAGE.settle && <IntroStage key="intro" stage={stage} onSkip={onSkip} />}</AnimatePresence>
 
       <div aria-hidden className="grid-overlay absolute inset-0 opacity-60" />
       <div

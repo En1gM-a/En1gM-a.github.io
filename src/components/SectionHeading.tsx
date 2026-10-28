@@ -40,7 +40,7 @@ export function SectionHeading({ title, note }: { title: string; note: string })
               className="inline-block origin-bottom"
               variants={{
                 hidden: { opacity: 0, rotateX: -100, y: "0.25em" },
-                shown: { opacity: 1, rotateX: 0, y: "0em", transition: { type: "spring", bounce: 0.25, visualDuration: 0.7 } },
+                shown: { opacity: 1, rotateX: 0, y: "0em", transition: { type: "spring", bounce: 0, visualDuration: 0.8 } },
               }}
             >
               {ch}
