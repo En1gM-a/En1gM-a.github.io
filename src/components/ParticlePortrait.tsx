@@ -299,5 +299,6 @@ export function ParticlePortrait({ src, active, instant = false }: { src: string
     }
   }, [active, src, reduce, instant])
 
-  return <canvas ref={ref} aria-hidden className="pointer-events-none absolute inset-0 z-[6] h-full w-full" />
+  // In front of the intro film, which plays on behind the page as it arrives
+  return <canvas ref={ref} aria-hidden className="pointer-events-none absolute inset-0 z-[32] h-full w-full" />
 }

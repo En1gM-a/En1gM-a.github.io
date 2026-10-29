@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react"
-import { AnimatePresence, motion, useReducedMotion, useScroll, useTransform } from "motion/react"
+import { AnimatePresence, motion, type Variants, useReducedMotion, useScroll, useTransform } from "motion/react"
 import { BigBang } from "./BigBang"
 import { Plasma } from "./Plasma"
 import { makeClumps } from "./cosmos"
@@ -112,10 +112,8 @@ function IntroStage({ stage, onSkip }: { stage: number; onSkip: () => void }) {
       // Fades away as the page arrives (or on skip) instead of vanishing in one frame
       exit={{ opacity: 0, transition: { duration: 0.6, ease: [0.16, 1, 0.3, 1] } }}
     >
-      {/* The Big Bang film (Veo 3.1 in Google Flow, after NASA's visualisation); drawn live if it could not load */}
-      {film ? (
-        <video src={film} autoPlay muted playsInline aria-hidden className="absolute inset-0 h-full w-full object-cover brightness-[.85]" />
-      ) : (
+      {/* Drawn live if the film could not load (the film plays in a layer of its own, IntroFilm) */}
+      {!film && (
         <>
           <Plasma bang={banged} clumps={clumps} />
           <BigBang bang={banged} clumps={clumps} />
@@ -202,6 +200,32 @@ function IntroStage({ stage, onSkip }: { stage: number; onSkip: () => void }) {
   )
 }
 
+// Played out, the film fades slowly, so its young galaxies drift behind the page as it arrives;
+// skipped before the title shows, it gets out of the way
+const filmOut: Variants = {
+  out: (skipped: boolean) => ({ opacity: 0, transition: skipped ? { duration: 0.4 } : { duration: 2.8, ease: "easeIn" } }),
+}
+
+/** The Big Bang film (Veo 3.1 in Google Flow, after NASA's visualisation), in its own layer so it can outlast the intro */
+function IntroFilm() {
+  // Taken once, as the stage does, so the two always agree on whether there is a film
+  const [film] = useState(() => filmUrl)
+  if (!film) return null
+  return (
+    <motion.video
+      src={film}
+      autoPlay
+      muted
+      playsInline
+      aria-hidden
+      variants={filmOut}
+      exit="out"
+      // Over the intro's vignette; under its chrome, the title and the portrait
+      className="pointer-events-none fixed inset-0 z-[31] h-full w-full object-cover brightness-[.85]"
+    />
+  )
+}
+
 export function Hero({ stage, skipped, onSkip }: { stage: number; skipped: boolean; onSkip: () => void }) {
   const ref = useRef<HTMLElement>(null)
   const reduce = useReducedMotion()
@@ -249,6 +273,7 @@ export function Hero({ stage, skipped, onSkip }: { stage: number; skipped: boole
       </AnimatePresence>
 
       <AnimatePresence>{stage >= STAGE.spark && stage < STAGE.settle && <IntroStage key="intro" stage={stage} onSkip={onSkip} />}</AnimatePresence>
+      <AnimatePresence custom={skipped}>{stage >= STAGE.spark && stage < STAGE.settle && <IntroFilm key="film" />}</AnimatePresence>
 
       <div aria-hidden className="grid-overlay absolute inset-0 opacity-60" />
       <div
