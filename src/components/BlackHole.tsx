@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react"
-import { motion } from "motion/react"
+import { motion, type Transition } from "motion/react"
 import { BigBang } from "./BigBang"
 import { Plasma } from "./Plasma"
 import { PULL, PULL_FROM, holeFilm } from "./hole"
@@ -9,6 +9,9 @@ const BLACKOUT_AT = 2300 // ms: the hole has swallowed everything, the view incl
 const FILM_BLACKOUT_AT = 3100 // ms: the same moment in the film, whose fall ends in the dark at 3 s
 const REVEAL_AFTER = 250 // ms: the intro has taken over underneath, so the dark can lift
 const LIFT = 650 // ms the dark takes to lift
+// The hole the film is seen through, in vmax: it opens small, then swells past every corner as the viewer falls in
+const HOLE = [0, 9, 90]
+const opening: Transition = { duration: 1.6, times: [0, 0.2, 1], ease: ["easeOut", [0.7, 0, 0.84, 0]] }
 
 /** Spiral what is on screen into its centre: the page, the nav and the sky. Returns a function that puts it all back */
 function pull() {
@@ -47,7 +50,7 @@ function pull() {
  * the horizon and the dark swallows everything; in it a violet point of light
  * appears, the singularity the Big Bang intro starts from, so the intro picks
  * up from that same point.
- * Once its film has loaded, the fall plays as that film instead, and its dark hands over the same way.
+ * Once its film has loaded, the fall plays as that film, seen through the hole as it opens, and its dark hands over the same way.
  */
 export function BlackHole({ onBlackout, onDone }: { onBlackout: () => void; onDone: () => void }) {
   const handlers = useRef({ onBlackout, onDone })
@@ -83,23 +86,31 @@ export function BlackHole({ onBlackout, onDone }: { onBlackout: () => void; onDo
   return (
     <motion.div
       aria-hidden
-      className="fixed inset-0 z-[95]"
+      className="fixed inset-0 z-[95] overflow-hidden"
       initial={{ opacity: 1 }}
       animate={{ opacity: reveal ? 0 : 1 }}
       transition={{ duration: (LIFT - 50) / 1000, ease: "easeOut" }}
     >
       {film ? (
-        // It opens as a small hole in the dark; fading in, it lets the page be seen twisting away into it
-        <motion.video
-          src={film}
-          autoPlay
-          muted
-          playsInline
-          className="absolute inset-0 h-full w-full object-cover brightness-[.85]"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.8, ease: "easeIn" }}
-        />
+        <>
+          <motion.video
+            src={film}
+            autoPlay
+            muted
+            playsInline
+            className="absolute inset-0 h-full w-full object-cover brightness-[.85]"
+            initial={{ clipPath: "circle(0vmax at 50% 50%)" }}
+            animate={{ clipPath: HOLE.map((r) => `circle(${r}vmax at 50% 50%)`) }}
+            transition={opening}
+          />
+          {/* Light dims toward the hole: its edge fades into the dark, and so does the page around it (dark ring at 50% = the hole's edge) */}
+          <motion.div
+            className="absolute top-1/2 left-1/2 size-[120vmax] -translate-x-1/2 -translate-y-1/2 bg-[radial-gradient(closest-side,transparent_35%,#030409_50%,transparent)]"
+            initial={{ scale: 0 }}
+            animate={{ scale: HOLE.map((r) => r / 30) }}
+            transition={opening}
+          />
+        </>
       ) : (
         <>
           <Plasma bang kind="blackhole" />
