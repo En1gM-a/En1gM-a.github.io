@@ -200,10 +200,14 @@ function IntroStage({ stage, onSkip }: { stage: number; onSkip: () => void }) {
   )
 }
 
-// Played out, the film fades slowly, so its young galaxies drift behind the page as it arrives;
-// skipped before the title shows, it gets out of the way
+// Played out, the film recedes into the site's own sky as the page arrives: it keeps drifting forward at a
+// steady rate, like the camera in it, while it dims and fades, accelerating away as it leaves. Its young
+// galaxies stay behind the page for the first seconds. Skipped before the title shows, it gets out of the way
 const filmOut: Variants = {
-  out: (skipped: boolean) => ({ opacity: 0, transition: skipped ? { duration: 0.4 } : { duration: 2.8, ease: "easeIn" } }),
+  out: (skipped: boolean) =>
+    skipped
+      ? { opacity: 0, transition: { duration: 0.4 } }
+      : { opacity: 0, scale: 1.08, filter: "brightness(0.5)", transition: { duration: 3, ease: "easeIn", scale: { duration: 3, ease: "linear" } } },
 }
 
 /** The Big Bang film (Veo 3.1 in Google Flow, after NASA's visualisation), in its own layer so it can outlast the intro */
@@ -220,8 +224,9 @@ function IntroFilm() {
       aria-hidden
       variants={filmOut}
       exit="out"
+      style={{ filter: "brightness(0.85)" }}
       // Over the intro's vignette; under its chrome, the title and the portrait
-      className="pointer-events-none fixed inset-0 z-[31] h-full w-full object-cover brightness-[.85]"
+      className="pointer-events-none fixed inset-0 z-[31] h-full w-full object-cover"
     />
   )
 }

@@ -119,8 +119,9 @@ void main() {
   vec2 uv = gl_FragCoord.xy / resolution.xy;
   vec4 p = texture2D(texturePosition, uv);
   vec4 v = texture2D(textureVelocity, uv);
-  // Flung or knocked loose, it flares at once, then cools slowly
-  float heat = clamp((length(v.xyz) - 0.05) * 2.5 + v.w * 0.7, 0.0, 1.0);
+  // Flung or knocked loose, it flares at once, then cools slowly. Speed alone only warms it violet, so the
+  // fly-in streams in calmly over the intro's hand-off; burning out white takes the pointer knocking it loose
+  float heat = clamp(min((length(v.xyz) - 0.05) * 2.5, 0.4) + v.w * 0.7, 0.0, 1.0);
   float glow = mix(p.w, heat, min(1.0, uDelta * (heat > p.w ? 12.0 : 3.0)));
   gl_FragColor = vec4(p.xyz + v.xyz * uDelta * 60.0, glow);
 }
