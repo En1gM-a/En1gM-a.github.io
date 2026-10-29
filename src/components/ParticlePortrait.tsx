@@ -70,6 +70,7 @@ uniform mat4 uToClip;      // simulation space to clip space
 uniform vec3 uRight;       // the screen's axes, in simulation space
 uniform vec3 uUp;
 ${noise}
+float hash(vec2 p) { return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); }
 void main() {
   vec2 uv = gl_FragCoord.xy / resolution.xy;
   vec4 p = texture2D(texturePosition, uv);
@@ -77,6 +78,8 @@ void main() {
   vec4 target = texture2D(tTarget, uv);
   vec3 vel = v.xyz;
   float loose = v.w;
+  float h1 = hash(uv);
+  float h2 = hash(uv + 7.31);
 
   // How close the pointer is to the rock, as seen on screen
   vec4 clip = uToClip * vec4(p.xyz, 1.0);
@@ -86,28 +89,32 @@ void main() {
     d.x *= uAspect;
     reach = 1.0 - smoothstep(0.05, 0.12, length(d));
   }
-  // Rocks under a moving pointer are swept along its path, the way a hand drags through water
+  // The pointer hits like a piece of passing debris: the rocks it crosses are knocked along its path, each a
+  // little off the line and out of the face, so they spray away and tumble instead of bursting outward
   vec2 sweep = vec2(uPointerMove.x * uAspect, uPointerMove.y) * 50.0 * reach * uStir;
   sweep *= min(1.0, 1.5 / max(length(sweep), 1e-4));
   float stir = length(sweep);
-  vel += (uRight * sweep.x + uUp * sweep.y) * 0.07;
+  float spread = (h1 - 0.5) * 1.2;
+  vec2 knocked = mat2(cos(spread), sin(spread), -sin(spread), cos(spread)) * sweep * (0.6 + h2 * 0.8);
+  vel += (uRight * knocked.x + uUp * knocked.y) * 0.16 + vec3(0.0, 0.0, (h2 - 0.5) * stir * 0.12);
 
   // Home on a spring, pulling harder from far away; it goes slack while the rock is loose or being swept
   vec3 home = target.xyz - p.xyz;
-  float give = clamp((1.0 - stir * 0.55) * (1.0 - loose * 0.6), 0.2, 1.0);
+  float give = clamp((1.0 - stir * 0.55) * (1.0 - loose * 0.85), 0.08, 1.0);
   float pull = 0.6 * (1.0 + length(home) * 0.5 * (1.0 - loose)) * give * step(target.w, uTime);
   vel += home * pull * uDelta;
 
   // A slow current through the whole sculpture, livelier where the pointer stirs it. Far gentler than on
   // emotion's glyph (0.0025): at rest it moves a rock less than the gap between rocks, so the features still read
-  vel += bitangentNoise(p.xyz * 0.9 + vec3(0.0, 0.0, uTime * 0.5)) * 0.0003 * (1.0 + stir * 8.0) * uDelta * 60.0;
+  vel += bitangentNoise(p.xyz * 0.9 + vec3(0.0, 0.0, uTime * 0.5)) * 0.0002 * (1.0 + stir * 6.0) * uDelta * 60.0;
 
-  vel *= pow(0.93, uDelta * 60.0);
+  // Knocked loose, a rock coasts as if in open space before the spring reels it back in
+  vel *= pow(mix(0.93, 0.965, loose), uDelta * 60.0);
   vel *= min(1.0, 0.8 / max(length(vel), 1e-4));
 
-  // Knocked loose at once, and it lingers loose for a moment before the spring takes it back
+  // Knocked loose at once, and it drifts loose for about a second before the spring takes it back
   float knock = clamp(stir * 2.5, 0.0, 1.0);
-  loose = knock > loose ? mix(loose, knock, min(1.0, uDelta * 15.0)) : loose - uDelta / 0.35;
+  loose = knock > loose ? mix(loose, knock, min(1.0, uDelta * 15.0)) : loose - uDelta / 1.0;
   gl_FragColor = vec4(vel, clamp(loose, 0.0, 1.0));
 }
 `
@@ -127,10 +134,12 @@ void main() {
 }
 `
 
+// Each rock is one point sprite, drawn as a faceted stone in the fragment shader: tens of thousands of them,
+// dense enough for the face to read, the way emotion's glyph is 78,400 points
 const vertex = /* glsl */ `
-attribute vec2 aRef;  // its texel in the simulation
-attribute vec3 aSeed; // tumble speed, phase, size
-attribute vec2 aTone; // brightness in the photo, mineral cast (0 none, 1 violet, 2 rust)
+attribute vec2 aRef;   // its texel in the simulation
+attribute vec4 aSeed;  // tumble speed, phase, size in px, mineral cast (0 none, 1 violet, 2 rust)
+attribute vec3 aColor; // the photo's colour there
 uniform sampler2D tPosition;
 uniform sampler2D tVelocity;
 uniform sampler2D tTarget;
@@ -138,8 +147,10 @@ uniform float uUnit; // px per simulation unit
 uniform float uTime;
 uniform float uScatter;
 uniform float uScan;
-varying vec3 vNormal;
-varying vec2 vTone;
+uniform float uSizeScale; // device px per px of rock at the camera's distance, times that distance
+varying mat3 vTurn;
+varying vec3 vColor;
+varying vec2 vSeed;
 varying float vScan;
 varying float vGlow;
 varying float vSpeed;
@@ -155,39 +166,57 @@ mat3 turn(vec3 k, float a) {
 
 void main() {
   vec4 state = texture2D(tPosition, aRef);
-  vec3 target = texture2D(tTarget, aRef).xyz * uUnit;
+  vec3 target = texture2D(tTarget, aRef).xyz;
   vec3 p = state.xyz * uUnit;
   // They drift apart as the hero scrolls away
-  p += normalize(target + vec3(0.0, 0.0, 1.0)) * uScatter * (0.4 + fract(aSeed.y * 13.37));
-  // Each rock tumbles slowly on its own axis
+  p += normalize(target * uUnit + vec3(0.0, 0.0, 1.0)) * uScatter * (0.4 + fract(aSeed.y * 13.37));
+  // Each rock tumbles slowly on its own axis, and turns further the farther it is knocked from home,
+  // so a hit sends it spinning and it rights itself as it settles
   vec3 axis = normalize(vec3(sin(aSeed.y * 7.1), cos(aSeed.y * 3.3), sin(aSeed.y * 5.7) + 0.3));
-  mat3 r = turn(axis, aSeed.y + uTime * aSeed.x);
-  vNormal = normalize(normalMatrix * (r * normal));
-  vTone = aTone;
-  vScan = 1.0 - smoothstep(0.0, 16.0, abs(target.y - uScan));
+  vTurn = turn(axis, aSeed.y + uTime * aSeed.x + length(state.xyz - target) * 0.9);
+  vColor = aColor;
+  vSeed = vec2(aSeed.y, aSeed.w);
+  vScan = 1.0 - smoothstep(0.0, 16.0, abs(target.y * uUnit - uScan));
   vGlow = state.w;
   vSpeed = length(texture2D(tVelocity, aRef).xyz);
-  gl_Position = projectionMatrix * modelViewMatrix * vec4(p + r * position * aSeed.z, 1.0);
+  vec4 mv = modelViewMatrix * vec4(p, 1.0);
+  gl_Position = projectionMatrix * mv;
+  gl_PointSize = min(aSeed.z * uSizeScale / -mv.z, 64.0);
 }
 `
 
 const fragment = /* glsl */ `
-varying vec3 vNormal;
-varying vec2 vTone;
+varying mat3 vTurn;
+varying vec3 vColor;
+varying vec2 vSeed;
 varying float vScan;
 varying float vGlow;
 varying float vSpeed;
 void main() {
-  vec3 n = normalize(vNormal);
-  // Rock lit from the upper left; the facets turned away catch a rim, warm violet shading to cyan at the edge
-  float key = max(dot(n, normalize(vec3(-0.45, 0.55, 0.7))), 0.0);
-  float rim = pow(1.0 - max(n.z, 0.0), 2.5);
-  // Stone by the photo's brightness, contrast kept so the face reads: dark slate to pale stone,
-  // a few rocks with a violet or rusty mineral cast
-  float l = pow(vTone.x, 1.5);
-  vec3 base = mix(vec3(0.1, 0.12, 0.2), vec3(0.86, 0.88, 0.94), l);
-  base *= vTone.y > 1.5 ? vec3(1.12, 0.86, 0.66) : mix(vec3(1.0), vec3(0.95, 0.78, 1.18), vTone.y);
-  vec3 c = base * (0.25 + 0.95 * key) + mix(vec3(0.89, 0.22, 1.0), vec3(0.13, 0.69, 1.0), rim) * rim * 0.22 * (0.3 + l);
+  // An irregular outline, different for every rock
+  vec2 q = gl_PointCoord * 2.0 - 1.0;
+  q.y = -q.y;
+  float a = atan(q.y, q.x);
+  float edge = 0.9 + 0.07 * sin(a * 3.0 + vSeed.x * 6.283) + 0.04 * sin(a * 5.0 + vSeed.x * 17.0);
+  float r = length(q) / edge;
+  if (r > 1.0) discard;
+  // Flat facets: the stone's rounded surface, turned with the rock, snapped to a handful of directions
+  vec3 n = vec3(q / edge, sqrt(1.0 - r * r));
+  vec3 f = normalize(floor(vTurn * n * 1.4 + 0.5));
+  // Lit from the upper left; the facets turned away catch a rim, warm violet shading to cyan at the edge
+  float key = max(dot(f, vTurn * normalize(vec3(-0.45, 0.55, 0.7))), 0.0);
+  float rim = pow(1.0 - n.z, 2.0);
+  // Stone by the photo's brightness, contrast kept so the features read, mineral-tinted by the photo's own
+  // colour (dark hair, warm skin, the gown's gold and blue); a few rocks with a violet or rusty cast
+  float lum = dot(vColor, vec3(0.2126, 0.7152, 0.0722));
+  float l = smoothstep(0.04, 0.92, lum);
+  vec3 stone = mix(vec3(0.06, 0.07, 0.12), vec3(0.9, 0.91, 0.95), l * l * (3.0 - 2.0 * l));
+  vec3 base = mix(stone, stone * (0.55 + vColor / max(lum, 0.05) * 0.45), 0.6);
+  base *= vSeed.y > 1.5 ? vec3(1.12, 0.86, 0.66) : mix(vec3(1.0), vec3(0.95, 0.78, 1.18), vSeed.y);
+  // The facets shade each stone only gently, so the photo's tones, not the lighting, carry the face
+  vec3 c = base * (0.62 + 0.5 * key) + mix(vec3(0.89, 0.22, 1.0), vec3(0.13, 0.69, 1.0), rim) * rim * 0.18 * (0.3 + l);
+  // A slightly darker rim on every stone separates it from its neighbours, so the surface reads as many rocks
+  c *= 0.86 + 0.14 * (1.0 - r * r);
   // Knocked rocks heat up violet and, flung hard, burn out toward white, then cool back to stone
   c += vec3(0.38, 0.1, 1.0) * vGlow * 0.9 + vec3(0.05, 0.0, 0.1) * smoothstep(0.05, 0.5, vSpeed);
   c = mix(c, vec3(1.5), smoothstep(0.45, 1.0, vGlow) * 0.3);
@@ -198,15 +227,16 @@ void main() {
 `
 
 /**
- * The portrait as a sculpture of asteroids: thousands of small faceted rocks,
- * sampled from the photo (brighter areas lighter, and nearer on a gentle dome,
- * so the face has depth). Each one is simulated on the GPU, after the glyph on
- * emotion-agency.com: a spring holds it to its place in the face and a slow
- * current keeps it alive. A moving pointer sweeps the rocks it passes along its
- * path, swirling them; knocked loose, they glow violet, hang a moment, cool and
- * drift home. They fly in to assemble behind the title, tumble, turn with the
- * pointer as one piece, take a periodic scan sweep, and drift apart as the hero
- * scrolls away. The source is a cut-out; only the person becomes rock.
+ * The portrait as a sculpture of asteroids: tens of thousands of small faceted
+ * rocks, packed as densely as the dots of emotion-agency.com's glyph, sampled
+ * from the photo (its brightness and a hint of its colour, nearer on a gentle
+ * dome, so the face has depth). Each one is simulated on the GPU: a spring holds
+ * it to its place in the face and a slow current keeps it alive. A moving
+ * pointer hits like passing debris: the rocks it crosses are knocked along its
+ * path in a spray, tumbling and glowing, coast loose for a second, then cool and
+ * settle home. They fly in to assemble behind the title, turn with the pointer
+ * as one piece, take a periodic scan sweep, and drift apart as the hero scrolls
+ * away. The source is a cut-out; only the person becomes rock.
  */
 export function ParticlePortrait({ src, active, instant = false }: { src: string; active: boolean; instant?: boolean }) {
   const ref = useRef<HTMLCanvasElement>(null)
@@ -230,21 +260,10 @@ export function ParticlePortrait({ src, active, instant = false }: { src: string
       uTime: { value: 0 },
       uScatter: { value: 0 },
       uScan: { value: 1e5 },
+      uSizeScale: { value: 1 },
     }
     const material = new THREE.ShaderMaterial({ vertexShader: vertex, fragmentShader: fragment, uniforms })
-
-    // One rock, roughened: the same corner always moves the same way, so its faces stay joined
-    const rock = coarse ? new THREE.OctahedronGeometry(1, 0) : new THREE.IcosahedronGeometry(1, 0)
-    const corners = rock.attributes.position
-    for (let i = 0; i < corners.count; i++) {
-      const x = corners.getX(i)
-      const y = corners.getY(i)
-      const z = corners.getZ(i)
-      const k = 0.72 + 0.56 * ((Math.abs(Math.sin(x * 12.9898 + y * 78.233 + z * 37.719)) * 43758.5453) % 1)
-      corners.setXYZ(i, x * k, y * k * 0.82, z * k)
-    }
-    rock.computeVertexNormals()
-    let mesh: THREE.Mesh<THREE.InstancedBufferGeometry, THREE.ShaderMaterial> | null = null
+    let mesh: THREE.Points<THREE.BufferGeometry, THREE.ShaderMaterial> | null = null
     // Float render targets where the GPU has them, half floats otherwise (enough for this scale)
     const dataType = renderer.extensions.has("EXT_color_buffer_float") ? THREE.FloatType : THREE.HalfFloatType
     let gpu: GPUComputationRenderer | null = null
@@ -297,11 +316,13 @@ export function ParticlePortrait({ src, active, instant = false }: { src: string
       const cx = w * (wide ? 0.62 : 0.5)
       const top = h * (wide ? 0.04 : 0.08)
       const cy = top + drawH / 2
-      const gap = Math.max(3.5, drawH / (wide ? 140 : 110))
+      // About 48k rocks on a desktop and 22k on a phone, close enough to overlap into one surface
+      const gap = Math.max(2.2, drawH / (wide ? 330 : 220))
       const cols = Math.round(drawW / gap)
       const rows = Math.round(drawH / gap)
       const unit = drawH / UNITS
       uniforms.uUnit.value = unit
+      uniforms.uSizeScale.value = renderer.getPixelRatio() * camera.position.z
 
       const off = document.createElement("canvas")
       off.width = cols
@@ -313,26 +334,24 @@ export function ParticlePortrait({ src, active, instant = false }: { src: string
 
       const homes: number[] = []
       const seeds: number[] = []
-      const tones: number[] = []
+      const colors: number[] = []
       for (let row = 0; row < rows; row++)
         for (let col = 0; col < cols; col++) {
           const i = (row * cols + col) * 4
-          const a = data[i + 3] / 255
-          if (a < 0.08) continue
+          // Every part of the person becomes rock, dark ones included, so eyes, brows and hair read as dark stone
+          if (data[i + 3] < 128) continue
           const lum = (0.2126 * data[i] + 0.7152 * data[i + 1] + 0.0722 * data[i + 2]) / 255
-          const lift = Math.min(1, Math.pow(lum, 0.75) * 1.25) * a
-          if (lift < 0.05) continue
           const x = (col + 0.5) * (drawW / cols) - drawW / 2
           const y = drawH / 2 - (row + 0.5) * (drawH / rows)
           // A gentle dome, the brighter parts a little nearer, so the face has depth when it turns
           const dome = Math.sqrt(Math.max(0, 1 - (x / (drawW * 0.55)) ** 2 - (y / (drawH * 0.55)) ** 2))
           // Top rows set off first, so the face assembles from the crown down
-          homes.push(x, y, (dome * 0.8 + lift * 0.35 - 0.4) * drawH * 0.2 + (Math.random() - 0.5) * gap * 2, Math.random() * 0.55 + (row / rows) * 0.25)
-          seeds.push(0.3 + Math.random() * 1.2, Math.random() * 6.283, gap * (0.28 + 0.48 * lift))
+          homes.push(x, y, (dome * 0.8 + lum * 0.35 - 0.4) * drawH * 0.2 + (Math.random() - 0.5) * gap * 0.8, Math.random() * 0.55 + (row / rows) * 0.25)
           const mineral = Math.random()
-          tones.push(lift, mineral < 0.03 ? 1 : mineral < 0.06 ? 2 : 0)
+          seeds.push(0.3 + Math.random() * 1.2, Math.random() * 6.283, gap * (1.55 + Math.random() * 0.4), mineral < 0.03 ? 1 : mineral < 0.06 ? 2 : 0)
+          colors.push(data[i] / 255, data[i + 1] / 255, data[i + 2] / 255)
         }
-      const count = tones.length / 2
+      const count = colors.length / 3
 
       // The simulation: one texel per rock
       gpu?.dispose()
@@ -382,17 +401,18 @@ export function ParticlePortrait({ src, active, instant = false }: { src: string
       uniforms.tPosition.value = gpu ? gpu.getCurrentRenderTarget(positions).texture : position0
       uniforms.tVelocity.value = gpu ? gpu.getCurrentRenderTarget(velocities).texture : velocity0
 
-      const geo = new THREE.InstancedBufferGeometry().copy(rock as unknown as THREE.InstancedBufferGeometry)
-      geo.setAttribute("aRef", new THREE.InstancedBufferAttribute(refs, 2))
-      geo.setAttribute("aSeed", new THREE.InstancedBufferAttribute(new Float32Array(seeds), 3))
-      geo.setAttribute("aTone", new THREE.InstancedBufferAttribute(new Float32Array(tones), 2))
-      geo.instanceCount = count
+      const geo = new THREE.BufferGeometry()
+      // Placed by the shader; three counts the points from this
+      geo.setAttribute("position", new THREE.BufferAttribute(new Float32Array(count * 3), 3))
+      geo.setAttribute("aRef", new THREE.BufferAttribute(refs, 2))
+      geo.setAttribute("aSeed", new THREE.BufferAttribute(new Float32Array(seeds), 4))
+      geo.setAttribute("aColor", new THREE.BufferAttribute(new Float32Array(colors), 3))
       if (mesh) {
         mesh.geometry.dispose()
         mesh.geometry = geo
       } else {
-        mesh = new THREE.Mesh(geo, material)
-        // The rocks are placed in the shader, so the base shape's bounds say nothing about where they are
+        mesh = new THREE.Points(geo, material)
+        // The rocks are placed in the shader, so the geometry's bounds say nothing about where they are
         mesh.frustumCulled = false
         scene.add(mesh)
       }
@@ -529,7 +549,6 @@ export function ParticlePortrait({ src, active, instant = false }: { src: string
       mesh?.geometry.dispose()
       gpu?.dispose()
       target?.dispose()
-      rock.dispose()
       material.dispose()
       renderer.dispose()
     }
