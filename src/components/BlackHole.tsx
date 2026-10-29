@@ -9,45 +9,82 @@ const BLACKOUT_AT = 2300 // ms: the hole has swallowed everything, the view incl
 const FILM_BLACKOUT_AT = 3100 // ms: the same moment in the film, whose fall ends in the dark at 3 s
 const REVEAL_AFTER = 250 // ms: the intro has taken over underneath, so the dark can lift
 const LIFT = 650 // ms the dark takes to lift
-// The hole the film is seen through, in vmax: it opens small, then swells past every corner as the viewer falls in
-const HOLE = [0, 9, 90]
-// Ease-in quad: close to the exponential way anything ahead looms, without stalling at the start
-const opening: Transition = { duration: 1.6, times: [0, 0.2, 1], ease: ["easeOut", [0.55, 0.085, 0.68, 0.53]] }
+// The hole the film is seen through, in vmax: it opens small and stays a small mouth while the page streams
+// into it, then swells past every corner as the viewer falls in (ease-in quad, close to how anything ahead looms)
+const HOLE = [0, 9, 16, 90]
+const opening: Transition = { duration: 2.1, times: [0, 0.14, 0.71, 1], ease: ["easeOut", "linear", [0.55, 0.085, 0.68, 0.53]] }
 
-/** Spiral what is on screen into its centre: the page, the nav and the sky. Returns a function that puts it all back */
-function pull() {
-  const cx = window.innerWidth / 2
-  const cy = window.innerHeight / 2
-  const restore: (() => void)[] = []
-  for (const el of document.querySelectorAll<HTMLElement>("main, footer, header, [data-backdrop]")) {
+const ease = "cubic-bezier(0.32, 0, 0.67, 0)" // slowly at first, then all at once
+
+/**
+ * Spaghettify what is on screen into the hole at its centre. Every visible part of the page is torn loose,
+ * stretched toward the hole and squeezed thin as it spirals in, the nearest first, as tides do, and the sky
+ * swirls down after it. Returns a function that puts it all back
+ */
+function spaghettify() {
+  const vw = window.innerWidth
+  const vh = window.innerHeight
+  const reach = Math.hypot(vw, vh) / 2
+  // The parts: anything with its own text, media or a visible box, each taken whole
+  const found = new Set<HTMLElement>()
+  for (const el of document.querySelectorAll<HTMLElement>("main *, header, header *, footer, footer *")) {
     const r = el.getBoundingClientRect()
-    if (r.bottom < 0 || r.top > window.innerHeight) continue
-    // Only the part on screen goes in (the rest of the page never needs drawing), turning about the screen's centre
-    el.style.clipPath = `inset(${Math.max(0, -r.top)}px 0 ${Math.max(0, r.bottom - window.innerHeight)}px 0)`
-    el.style.transformOrigin = `${cx - r.left}px ${cy - r.top}px`
-    const fall = el.animate(
-      [
-        { transform: "rotate(0deg) scale(1)", opacity: 1 },
-        { transform: "rotate(16deg) scale(1.35)", opacity: 1, offset: 0.5 },
-        { transform: "rotate(75deg) scale(3.4)", opacity: 0 },
-      ],
-      // The viewer is pulled in, so the page rushes outward past them, twisting, slowly at first, then all at once
-      { delay: PULL_FROM * 1000, duration: PULL * 1000, easing: "cubic-bezier(0.32, 0, 0.67, 0)", fill: "forwards" },
-    )
-    restore.push(() => {
-      fall.cancel()
-      el.style.clipPath = ""
-      el.style.transformOrigin = ""
-    })
+    if (r.width < 2 || r.height < 2 || r.bottom < 0 || r.top > vh || r.right < 0 || r.left > vw) continue
+    const css = getComputedStyle(el)
+    const own =
+      el.matches("img, svg, canvas, video, input, textarea, button") ||
+      [...el.childNodes].some((n) => n.nodeType === Node.TEXT_NODE && n.textContent?.trim()) ||
+      css.backgroundColor !== "rgba(0, 0, 0, 0)" ||
+      css.backgroundImage !== "none" ||
+      parseFloat(css.borderTopWidth) > 0
+    if (!own) continue
+    // Inline boxes can't be transformed, so the block they sit in goes instead
+    let part = el
+    while (getComputedStyle(part).display === "inline" && part.parentElement) part = part.parentElement
+    found.add(part)
   }
-  return () => restore.forEach((f) => f())
+  const parts = [...found].filter((el) => ![...found].some((other) => other !== el && other.contains(el)))
+  const falls: Animation[] = []
+  for (const el of parts) {
+    const r = el.getBoundingClientRect()
+    const x = r.left + r.width / 2 - vw / 2
+    const y = r.top + r.height / 2 - vh / 2
+    const far = Math.min(1, Math.hypot(x, y) / reach)
+    // On linear time: the spiral and the stretch below already accelerate, so the strands lengthen from the start
+    const frames = [0, 0.2, 0.4, 0.6, 0.75, 0.88, 1].map((p) => {
+      // Spiralling in as it falls; stretched along the line to the hole, squeezed across it
+      const turn = 1.5 * p * p
+      const left = 1 - p * p
+      const nx = (x * Math.cos(turn) - y * Math.sin(turn)) * left
+      const ny = (x * Math.sin(turn) + y * Math.cos(turn)) * left
+      const toHole = Math.atan2(ny, nx)
+      return {
+        offset: p,
+        transform: `translate(${nx - x}px, ${ny - y}px) rotate(${toHole}rad) scale(${1 + 7 * p ** 1.6}, ${1 / (1 + 5 * p)}) rotate(${turn - toHole}rad)`,
+        opacity: p <= 0.65 ? 1 : 1 - ((p - 0.65) / 0.35) ** 2,
+      }
+    })
+    // The nearer a part is, the sooner the tide takes it; all of it is in by the time the hole passes the corners
+    falls.push(el.animate(frames, { delay: (PULL_FROM + far * 0.3) * 1000, duration: (PULL - far * 0.3) * 1000, fill: "forwards" }))
+  }
+  for (const el of document.querySelectorAll<HTMLElement>("[data-backdrop]"))
+    falls.push(
+      el.animate([{ transform: "rotate(0deg) scale(1)", opacity: 1 }, { transform: "rotate(110deg) scale(0.12)", opacity: 0 }], {
+        delay: PULL_FROM * 1000,
+        duration: PULL * 1000,
+        easing: ease,
+        fill: "forwards",
+      }),
+    )
+  return () => falls.forEach((f) => f.cancel())
 }
 
 /**
  * "Back to orbit": a small black hole opens at the centre of the screen and
- * pulls the viewer in. It looms faster and faster as they fall; the page, the
- * nav and the sky rush outward past them, twisting, while streaks of starlight
- * stream past like a warp and the view rolls as they spiral. Then they cross
+ * spaghettifies the page: every part of it, the nav included, is stretched
+ * toward the hole and squeezed thin as it spirals in, the nearest first, and
+ * the sky swirls down after it. The hole looms faster and faster as the viewer
+ * falls in, while streaks of starlight stream past like a warp. Then they cross
  * the horizon and the dark swallows everything; in it a violet point of light
  * appears, the singularity the Big Bang intro starts from, so the intro picks
  * up from that same point.
@@ -61,7 +98,7 @@ export function BlackHole({ onBlackout, onDone }: { onBlackout: () => void; onDo
 
   useEffect(() => {
     const blackout = film ? FILM_BLACKOUT_AT : BLACKOUT_AT
-    const release = pull()
+    const release = spaghettify()
     // Nothing scrolls while it falls in (the smooth scroller is told too, since it ignores prevented wheels)
     holdScroll(true)
     const hold = (e: Event) => e.preventDefault()

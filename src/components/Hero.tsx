@@ -10,11 +10,12 @@ import { filmUrl } from "../boot"
 import { useScramble } from "../hooks/useScramble"
 import { profile } from "../data/content"
 
-const NAME = "KARL"
+const NAME = "KARL'S"
 const WORD = "PORTFOLIO"
 
 // The letters condense out of the fog where they stand, a little out of step, like the first stars
-const DELAYS = [0.08, 0, 0.14, 0.04]
+// (one per letter; a longer name reuses them in turn)
+const DELAYS = [0.08, 0, 0.14, 0.04, 0.18, 0.1]
 
 // RGB split the letters carry as they condense, settling to a clean edge; a soft dark halo keeps them
 // readable over the brightest fog in the film
@@ -135,7 +136,7 @@ function IntroStage({ stage, onSkip }: { stage: number; onSkip: () => void }) {
       )}
 
       {stage < STAGE.decrypt && (
-        // Same PORTFOLIO-wide box as the decrypting word, so KARL stays put when the glyphs take over
+        // Same PORTFOLIO-wide box as the decrypting word, so KARL'S stays put when the glyphs take over
         <div className="display hero-word grid" aria-hidden>
           <span className="invisible col-start-1 row-start-1 whitespace-nowrap">{WORD}</span>
           <div className="col-start-1 row-start-1 flex items-end">
@@ -151,10 +152,10 @@ function IntroStage({ stage, onSkip }: { stage: number; onSkip: () => void }) {
                 }
                 transition={{
                   duration: 0.9,
-                  delay: DELAYS[i],
+                  delay: DELAYS[i % DELAYS.length],
                   ease: [0.22, 1, 0.36, 1],
-                  opacity: { duration: 0.5, delay: DELAYS[i] },
-                  textShadow: { duration: 0.9, delay: DELAYS[i] + 0.15, ease: "easeOut" },
+                  opacity: { duration: 0.5, delay: DELAYS[i % DELAYS.length] },
+                  textShadow: { duration: 0.9, delay: DELAYS[i % DELAYS.length] + 0.15, ease: "easeOut" },
                 }}
               >
                 {ch}
