@@ -5,7 +5,7 @@
  * hands over to the intro, so none of it lands mid-animation. Past MAX_WAIT the
  * intro starts anyway, and late pieces fade in afterwards.
  */
-export type BootTask = "fonts" | "portrait" | "galaxy" | "suit" | "voyage"
+export type BootTask = "fonts" | "portrait" | "galaxy" | "suit" | "voyage" | "film"
 
 const TASKS: Record<BootTask, { label: string; weight: number }> = {
   fonts: { label: "Syncing typefaces", weight: 1 },
@@ -14,6 +14,8 @@ const TASKS: Record<BootTask, { label: string; weight: number }> = {
   suit: { label: "Suiting up the astronaut", weight: 3 },
   // The project planets' shaders: on a first visit their compile can hold the page still for seconds
   voyage: { label: "Plotting the voyage", weight: 2 },
+  // The intro's Big Bang film, held in memory so it plays without waiting on the network
+  film: { label: "Rendering the Big Bang", weight: 2 },
 }
 const ORDER = Object.keys(TASKS) as BootTask[]
 const TOTAL = ORDER.reduce((s, t) => s + TASKS[t].weight, 0)
@@ -23,6 +25,9 @@ const HANDOFF = 260 // ms from the loader starting to fade to the intro starting
 // The suit only appears after the intro and joins the scene without a hitch whenever it lands,
 // so a slow download shouldn't hold the intro back for long
 const SUIT_WAIT = 3500
+
+/** The intro film as a local blob URL once loaded; empty if it could not load (the intro then draws it live) */
+export let filmUrl = ""
 
 const done = new Set<BootTask>()
 let resolveReady: () => void = () => {}
@@ -102,5 +107,13 @@ export function startBoot() {
     .catch(() => {})
     .then(() => bootDone("portrait"))
   window.setTimeout(() => bootDone("suit"), SUIT_WAIT)
+  // With reduced motion there is no intro to play it in
+  if (matchMedia("(prefers-reduced-motion: reduce)").matches) bootDone("film")
+  else
+    fetch(`${import.meta.env.BASE_URL}media/big-bang.mp4`)
+      .then((r) => (r.ok ? r.blob() : Promise.reject()))
+      .then((b) => (filmUrl = URL.createObjectURL(b)))
+      .catch(() => {})
+      .then(() => bootDone("film"))
   window.setTimeout(finish, MAX_WAIT)
 }

@@ -6,6 +6,7 @@ import { makeClumps } from "./cosmos"
 import { ParticlePortrait } from "./ParticlePortrait"
 import { ArrowDown } from "./icons"
 import { BANG_AT, STAGE } from "../hooks/useIntro"
+import { filmUrl } from "../boot"
 import { useScramble } from "../hooks/useScramble"
 import { profile } from "../data/content"
 
@@ -107,10 +108,18 @@ function IntroStage({ stage, onSkip }: { stage: number; onSkip: () => void }) {
       // Fades away as the page arrives (or on skip) instead of vanishing in one frame
       exit={{ opacity: 0, transition: { duration: 0.6, ease: [0.16, 1, 0.3, 1] } }}
     >
-      <Plasma bang={banged} clumps={clumps} />
-      <BigBang bang={banged} clumps={clumps} />
+      {/* The Big Bang film (Wan 3.0 via Higgsfield, after NASA's visualisation); drawn live if it could not load */}
+      {filmUrl ? (
+        <video src={filmUrl} autoPlay muted playsInline aria-hidden className="absolute inset-0 h-full w-full object-cover" />
+      ) : (
+        <>
+          <Plasma bang={banged} clumps={clumps} />
+          <BigBang bang={banged} clumps={clumps} />
+        </>
+      )}
 
-      {/* The singularity: a violet point of light gathering calmly, then blooming into the glow that fills everything */}
+      {/* The singularity: a violet point of light gathering calmly, then blooming into the glow that fills everything (the film has its own) */}
+      {!filmUrl && (
       <motion.span
         aria-hidden
         className="absolute top-1/2 left-1/2 -mt-[5px] -ml-[5px] size-[10px] rounded-full bg-white shadow-[0_0_12px_4px_rgba(214,196,255,0.9),0_0_48px_16px_rgba(150,110,255,0.45),0_0_110px_36px_rgba(110,70,220,0.25)]"
@@ -121,6 +130,7 @@ function IntroStage({ stage, onSkip }: { stage: number; onSkip: () => void }) {
             : { scale: [0, 0.7, 1, 1.3], opacity: [0, 0.75, 0.9, 1], transition: { duration: 1.15, times: [0, 0.35, 0.7, 1], ease: "easeInOut" } }
         }
       />
+      )}
 
       {stage < STAGE.decrypt && (
         // Same PORTFOLIO-wide box as the decrypting word, so KARL stays put when the glyphs take over
