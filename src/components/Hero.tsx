@@ -16,9 +16,11 @@ const WORD = "PORTFOLIO"
 // The letters condense out of the fog where they stand, a little out of step, like the first stars
 const DELAYS = [0.08, 0, 0.14, 0.04]
 
-// RGB split the letters carry as they condense, settling to a clean edge
-const SPLIT = "-0.09em 0 0 rgba(34,211,238,0.85), 0.09em 0 0 rgba(244,114,182,0.85)"
-const CLEAN = "0em 0 0 rgba(34,211,238,0), 0em 0 0 rgba(244,114,182,0)"
+// RGB split the letters carry as they condense, settling to a clean edge; a soft dark halo keeps them
+// readable over the brightest fog in the film
+const HALO = "0 0.03em 0.5em rgba(3,4,9,0.85)"
+const SPLIT = `-0.09em 0 0 rgba(34,211,238,0.85), 0.09em 0 0 rgba(244,114,182,0.85), ${HALO}`
+const CLEAN = `0em 0 0 rgba(34,211,238,0), 0em 0 0 rgba(244,114,182,0), ${HALO}`
 
 const LOG: [number, string, string][] = [
   [STAGE.spark, "singularity", "detected"],
@@ -110,7 +112,7 @@ function IntroStage({ stage, onSkip }: { stage: number; onSkip: () => void }) {
     >
       {/* The Big Bang film (Wan 3.0 via Higgsfield, after NASA's visualisation); drawn live if it could not load */}
       {filmUrl ? (
-        <video src={filmUrl} autoPlay muted playsInline aria-hidden className="absolute inset-0 h-full w-full object-cover" />
+        <video src={filmUrl} autoPlay muted playsInline aria-hidden className="absolute inset-0 h-full w-full object-cover brightness-[.85]" />
       ) : (
         <>
           <Plasma bang={banged} clumps={clumps} />
