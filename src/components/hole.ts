@@ -4,6 +4,9 @@
  * then swells past every edge of the screen as they cross the horizon.
  */
 
+// Imported, so its URL carries a content hash and a new film is never shadowed by a cached old one
+import blackHoleFilm from "../media/black-hole.mp4"
+
 /** When the page starts to fall in, and how long it takes (s after the hole opens) */
 export const PULL_FROM = 0.15
 export const PULL = 1.5
@@ -21,7 +24,7 @@ let asked = false
 export function preloadHoleFilm() {
   if (asked) return
   asked = true
-  fetch(`${import.meta.env.BASE_URL}media/black-hole.mp4`)
+  fetch(blackHoleFilm)
     .then((r) => (r.ok ? r.blob() : Promise.reject()))
     .then((b) => (holeFilm = URL.createObjectURL(b)))
     .catch(() => {})

@@ -5,6 +5,10 @@
  * hands over to the intro, so none of it lands mid-animation. Past MAX_WAIT the
  * intro starts anyway, and late pieces fade in afterwards.
  */
+// Imported, not served from public/, so its URL carries a content hash: a new film can never be shadowed by a
+// browser's cached copy of the old one under the same name
+import bigBangFilm from "./media/big-bang.mp4"
+
 export type BootTask = "fonts" | "portrait" | "galaxy" | "suit" | "voyage" | "film"
 
 const TASKS: Record<BootTask, { label: string; weight: number }> = {
@@ -111,7 +115,7 @@ export function startBoot() {
   // With reduced motion there is no intro to play it in
   if (matchMedia("(prefers-reduced-motion: reduce)").matches) bootDone("film")
   else
-    fetch(`${import.meta.env.BASE_URL}media/big-bang.mp4`)
+    fetch(bigBangFilm)
       .then((r) => (r.ok ? r.blob() : Promise.reject()))
       .then((b) => (filmUrl = URL.createObjectURL(b)))
       .catch(() => {})
