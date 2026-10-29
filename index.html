@@ -30,20 +30,26 @@
         background: #030409;
         color-scheme: dark;
       }
-      /* Boot loader: a singularity gathering at the centre, where the intro's Big Bang begins */
+      /* Boot loader: an instrument trained on a singularity gathering at the centre, where the intro's Big Bang
+         begins. A dial of 60 ticks, a progress arc that fills with real progress, two satellites on tilted orbits
+         (smaller and dimmer as they pass behind it) and a slow drift of stars */
       #boot {
         position: fixed;
         inset: 0;
         z-index: 100;
         background:
+          radial-gradient(circle at 50% 50%, rgba(110, 70, 220, 0.09), transparent 34%),
           radial-gradient(1px 1px at 18% 26%, rgba(255, 255, 255, 0.55), transparent),
           radial-gradient(1px 1px at 72% 18%, rgba(255, 255, 255, 0.4), transparent),
           radial-gradient(1px 1px at 86% 64%, rgba(255, 255, 255, 0.5), transparent),
           radial-gradient(1px 1px at 34% 78%, rgba(255, 255, 255, 0.35), transparent),
           radial-gradient(1px 1px at 58% 88%, rgba(255, 255, 255, 0.45), transparent),
+          radial-gradient(1px 1px at 44% 12%, rgba(255, 255, 255, 0.3), transparent),
+          radial-gradient(1px 1px at 6% 86%, rgba(255, 255, 255, 0.4), transparent),
           radial-gradient(1.5px 1.5px at 9% 58%, rgba(207, 230, 255, 0.6), transparent),
           radial-gradient(1.5px 1.5px at 92% 34%, rgba(255, 210, 160, 0.5), transparent),
           #030409;
+        animation: boot-drift 90s linear infinite;
         transition: opacity 0.5s ease;
       }
       #boot.boot-out {
@@ -54,9 +60,39 @@
         position: absolute;
         top: 50%;
         left: 50%;
-        width: 92px;
-        height: 92px;
-        margin: -46px 0 0 -46px;
+        width: 136px;
+        height: 136px;
+        margin: -68px 0 0 -68px;
+      }
+      .boot-dial {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        overflow: visible;
+        transform: rotate(-90deg);
+        transition: opacity 0.3s ease;
+      }
+      .boot-ticks {
+        fill: none;
+        stroke: rgba(139, 147, 173, 0.32);
+        stroke-width: 3;
+        stroke-dasharray: 0.16 0.84;
+        transform-origin: 0 0;
+        animation: boot-spin 60s linear infinite;
+      }
+      .boot-track {
+        fill: none;
+        stroke: rgba(255, 255, 255, 0.07);
+        stroke-width: 1;
+      }
+      .boot-arc {
+        fill: none;
+        stroke: url(#boot-grad);
+        stroke-width: 1.6;
+        stroke-linecap: round;
+        stroke-dasharray: 100;
+        stroke-dashoffset: 97;
       }
       .boot-dot {
         position: absolute;
@@ -73,67 +109,86 @@
           0 0 90px 30px rgba(110, 70, 220, 0.2);
         animation: boot-breathe 2.4s ease-in-out infinite;
       }
+      /* An orbit: a faint ellipse, and a satellite travelling it (offset-path keeps the satellite round) */
       .boot-orbit {
         position: absolute;
-        inset: 0;
+        top: 50%;
+        left: 50%;
+        width: 136px;
+        height: 44px;
+        margin: -22px 0 0 -68px;
         border-radius: 50%;
-        border: 1px dashed rgba(103, 232, 249, 0.25);
-        animation: boot-spin 3.2s linear infinite;
+        border: 1px solid rgba(167, 139, 250, 0.14);
+        transform: rotate(-18deg);
         transition: opacity 0.3s ease;
+      }
+      .boot-orbit-b {
+        width: 104px;
+        height: 32px;
+        margin: -16px 0 0 -52px;
+        border-color: rgba(103, 232, 249, 0.12);
+        transform: rotate(26deg);
       }
       .boot-orbit i {
         position: absolute;
-        top: -2px;
-        left: 50%;
-        width: 4px;
-        height: 4px;
-        margin-left: -2px;
+        top: -1px;
+        left: -1px;
+        width: 5px;
+        height: 5px;
+        margin: -2.5px 0 0 -2.5px;
         border-radius: 50%;
         background: #67e8f9;
         box-shadow: 0 0 8px 2px rgba(103, 232, 249, 0.7);
+        offset-path: path("M 0,22 a 68,22 0 1,0 136,0 a 68,22 0 1,0 -136,0");
+        offset-rotate: 0deg;
+        animation: boot-orbit 4.2s linear infinite;
+      }
+      .boot-orbit-b i {
+        width: 3px;
+        height: 3px;
+        margin: -1.5px 0 0 -1.5px;
+        background: #c4b5fd;
+        box-shadow: 0 0 8px 2px rgba(167, 139, 250, 0.7);
+        offset-path: path("M 0,16 a 52,16 0 1,0 104,0 a 52,16 0 1,0 -104,0");
+        animation-duration: 6.6s;
+        animation-direction: reverse;
       }
       .boot-meta {
         position: absolute;
-        top: calc(50% + 76px);
+        top: calc(50% + 92px);
         left: 50%;
-        width: 220px;
-        margin-left: -110px;
-        font: 500 11px/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-        letter-spacing: 0.22em;
+        width: 260px;
+        margin-left: -130px;
+        text-align: center;
+        font: 500 10px/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        letter-spacing: 0.2em;
         text-transform: uppercase;
-        color: #8b93ad;
+        color: #7d86a3;
         transition: opacity 0.3s ease;
       }
-      .boot-line {
-        display: flex;
-        justify-content: space-between;
-        margin: 0;
-      }
-      #boot-pct {
-        color: #67e8f9;
+      .boot-pct {
+        margin: 0 0 8px;
+        font: 200 30px/1 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+        letter-spacing: 0.06em;
+        color: #e7ecf7;
         font-variant-numeric: tabular-nums;
-      }
-      .boot-bar {
-        display: block;
-        height: 1px;
-        margin: 10px 0;
-        background: rgba(255, 255, 255, 0.12);
-        overflow: hidden;
-      }
-      .boot-bar i {
-        display: block;
-        height: 100%;
-        transform: scaleX(0.03);
-        transform-origin: left;
-        background: linear-gradient(90deg, #67e8f9, #a78bfa);
       }
       .boot-task {
         margin: 0;
         min-height: 1.4em;
-        font-size: 10px;
-        letter-spacing: 0.18em;
-        color: #7d86a3;
+      }
+      .boot-name {
+        position: absolute;
+        bottom: 28px;
+        left: 0;
+        right: 0;
+        margin: 0;
         text-align: center;
+        font: 500 10px/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        letter-spacing: 0.32em;
+        text-transform: uppercase;
+        color: #4d5470;
+        transition: opacity 0.3s ease;
       }
       .boot-sr {
         position: absolute;
@@ -143,8 +198,10 @@
         clip: rect(0 0 0 0);
         white-space: nowrap;
       }
+      #boot.boot-ready .boot-dial,
       #boot.boot-ready .boot-orbit,
-      #boot.boot-ready .boot-meta {
+      #boot.boot-ready .boot-meta,
+      #boot.boot-ready .boot-name {
         opacity: 0;
       }
       @keyframes boot-spin {
@@ -158,9 +215,40 @@
           opacity: 0.8;
         }
       }
+      @keyframes boot-orbit {
+        0% {
+          offset-distance: 0%;
+          transform: scale(1);
+          opacity: 0.9;
+        }
+        25% {
+          transform: scale(1.3);
+          opacity: 1;
+        }
+        50% {
+          transform: scale(1);
+          opacity: 0.9;
+        }
+        75% {
+          transform: scale(0.55);
+          opacity: 0.3;
+        }
+        100% {
+          offset-distance: 100%;
+          transform: scale(1);
+          opacity: 0.9;
+        }
+      }
+      @keyframes boot-drift {
+        to {
+          background-position: 0 0, -320px 120px, -320px 120px, -320px 120px, -320px 120px, -320px 120px, -320px 120px, -320px 120px, -480px 180px, -480px 180px, 0 0;
+        }
+      }
       @media (prefers-reduced-motion: reduce) {
+        #boot,
         .boot-dot,
-        .boot-orbit {
+        .boot-ticks,
+        .boot-orbit i {
           animation: none;
         }
       }
@@ -170,14 +258,26 @@
   <body>
     <div id="boot">
       <div class="boot-core" aria-hidden="true">
+        <svg class="boot-dial" viewBox="-68 -68 136 136">
+          <defs>
+            <linearGradient id="boot-grad" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" stop-color="#67e8f9" />
+              <stop offset="1" stop-color="#a78bfa" />
+            </linearGradient>
+          </defs>
+          <circle class="boot-ticks" r="64" pathLength="60" />
+          <circle class="boot-track" r="56" />
+          <circle id="boot-fill" class="boot-arc" r="56" pathLength="100" />
+        </svg>
         <span class="boot-orbit"><i></i></span>
+        <span class="boot-orbit boot-orbit-b"><i></i></span>
         <span class="boot-dot"></span>
       </div>
       <div class="boot-meta" aria-hidden="true">
-        <p class="boot-line"><span>Initializing</span><span id="boot-pct">0%</span></p>
-        <span class="boot-bar"><i id="boot-fill"></i></span>
+        <p id="boot-pct" class="boot-pct">0%</p>
         <p id="boot-task" class="boot-task">Establishing uplink</p>
       </div>
+      <p class="boot-name" aria-hidden="true">Karl Adrian Bensi &middot; Portfolio</p>
       <p id="boot-sr" class="boot-sr" role="status">Loading the portfolio</p>
     </div>
     <div id="root"></div>

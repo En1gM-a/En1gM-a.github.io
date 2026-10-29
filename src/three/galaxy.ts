@@ -72,6 +72,33 @@ const starsFragment = /* glsl */ `
   }
 `
 
+// Space dust in a tunnel around the viewer, DEPTH units long. It drifts toward them as the page scrolls and
+// wraps round to the far end, so scrolling reads as flying through space: the near-field parallax
+// emotion-agency.com gets from its rocks and grass. Each speck is a line, a dot at rest, a streak in a hurry
+const DEPTH = 40
+const dustVertex = /* glsl */ `
+  uniform float uTravel; // how far the viewer has flown, in units
+  uniform float uStreak; // trail length, from how fast they are flying
+  attribute float aEnd;  // 0 the speck, 1 the far end of its trail
+  varying float vFade;
+  void main() {
+    vec3 p = position;
+    p.z = mod(p.z + uTravel, ${DEPTH}.0) - ${DEPTH}.0 - aEnd * uStreak;
+    // Faint far off, brightest close by, gone before it reaches the lens; the trail fades behind it
+    vFade = smoothstep(-${DEPTH}.0, -${DEPTH * 0.55}.0, p.z) * (1.0 - smoothstep(-2.5, -0.6, p.z)) * (1.0 - aEnd * 0.85);
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.0);
+  }
+`
+const dustFragment = /* glsl */ `
+  uniform float uOpacity;
+  varying float vFade;
+  void main() {
+    gl_FragColor = vec4(vec3(0.78, 0.86, 1.0), vFade * uOpacity);
+  }
+`
+// Units flown per px scrolled: about half the tunnel per screen
+const FLIGHT = 0.022
+
 /** Soft radial blob drawn on a canvas, used for the core glow and nebula clouds */
 function cloudTexture(inner: string, outer: string, noise = 0) {
   const size = 256
@@ -291,6 +318,37 @@ export function createGalaxy(canvas: HTMLCanvasElement, { reduce, mobile, onSuit
   pulse.position.y = -0.88
   scene.add(pulse)
 
+  // The dust rides with the camera, so it is always around the viewer, whichever way the path turns
+  const specks = mobile ? 700 : 1600
+  const dustAt = new Float32Array(specks * 6)
+  const dustEnd = new Float32Array(specks * 2)
+  for (let i = 0; i < specks; i++) {
+    const x = (Math.random() - 0.5) * 30
+    const y = (Math.random() - 0.5) * 18
+    const z = -Math.random() * DEPTH
+    dustAt.set([x, y, z, x, y, z], i * 6)
+    dustEnd.set([0, 1], i * 2)
+  }
+  const dustGeo = new THREE.BufferGeometry()
+  dustGeo.setAttribute("position", new THREE.BufferAttribute(dustAt, 3))
+  dustGeo.setAttribute("aEnd", new THREE.BufferAttribute(dustEnd, 1))
+  const dustMat = new THREE.ShaderMaterial({
+    uniforms: { uTravel: { value: 0 }, uStreak: { value: 0.02 }, uOpacity: { value: 0 } },
+    vertexShader: dustVertex,
+    fragmentShader: dustFragment,
+    transparent: true,
+    depthWrite: false,
+    blending: THREE.AdditiveBlending,
+  })
+  const dust = new THREE.LineSegments(dustGeo, dustMat)
+  dust.frustumCulled = false
+  // A still page (reduced motion) doesn't travel
+  dust.visible = !reduce
+  camera.add(dust)
+  let flown = 0
+  let flying = 0
+  let rushed = 0
+
   // A static (reduced-motion) page redraws when the suit lands
   const props = createProps(renderer, scene, camera, { mobile, reduce, invalidate: () => reduce && started && render(performance.now()), onSuit })
 
@@ -335,7 +393,9 @@ export function createGalaxy(canvas: HTMLCanvasElement, { reduce, mobile, onSuit
       warp += (warpTarget - warp) * Math.min(1, dt * 3)
       time += dt * (1 + warp * 7)
       if (arriving && arriveT < 1) arriveT = Math.min(1, arriveT + dt / 2.6)
-      progress += (scrollProgress() - progress) * Math.min(1, dt * 4)
+      // The camera keeps up with the (already smoothed) scroll, as emotion-agency.com's does, rather than easing
+      // a second time behind it, so the sky moves with the page
+      progress += (scrollProgress() - progress) * Math.min(1, dt * 10)
       pointer.x += (pointer.tx - pointer.x) * Math.min(1, dt * 3)
       pointer.y += (pointer.ty - pointer.y) * Math.min(1, dt * 3)
     }
@@ -372,6 +432,16 @@ export function createGalaxy(canvas: HTMLCanvasElement, { reduce, mobile, onSuit
     pulseMat.opacity = (1 - cycle) * 0.22 * dim
     gridMat.opacity = 0.07 * dim
     stars.rotation.y = time * 0.004
+
+    // The journey: the distance scrolled is the distance flown; a hyperspace jump rushes the dust on too
+    const scrolled = progress * Math.max(0, document.documentElement.scrollHeight - h)
+    rushed += warp * dt * 60
+    const next = scrolled * FLIGHT + rushed
+    flying += (Math.abs(next - flown) / Math.max(dt, 1e-3) - flying) * Math.min(1, dt * 6)
+    flown = next
+    dustMat.uniforms.uTravel.value = flown
+    dustMat.uniforms.uStreak.value = 0.02 + Math.min(6, flying * 0.06 + warp * 5)
+    dustMat.uniforms.uOpacity.value = (0.25 + 0.65 * Math.min(1, scrolled / (h * 0.6))) * e
 
     props.update(reduce ? 0 : dt, e)
 

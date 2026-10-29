@@ -80,7 +80,7 @@ export function startBoot() {
     return
   }
   const pct = el.querySelector<HTMLElement>("#boot-pct")
-  const fill = el.querySelector<HTMLElement>("#boot-fill")
+  const fill = el.querySelector<SVGCircleElement>("#boot-fill")
   const label = el.querySelector<HTMLElement>("#boot-task")
 
   // The readout eases toward the real progress, so it never jumps or stalls visibly
@@ -91,7 +91,8 @@ export function startBoot() {
     const target = finished ? 1 : ORDER.reduce((s, t) => s + (done.has(t) ? TASKS[t].weight : 0), 0) / TOTAL
     shown += (target - shown) * (finished ? 0.25 : 0.1)
     if (pct) pct.textContent = `${Math.round(shown * 100)}%`
-    if (fill) fill.style.transform = `scaleX(${Math.max(0.03, shown).toFixed(3)})`
+    // The arc round the dial (path length 100) fills with the progress
+    if (fill) fill.style.strokeDashoffset = (100 - Math.max(0.03, shown) * 100).toFixed(2)
     const next = ORDER.find((t) => !done.has(t))
     const now = finished || !next ? "Ready" : TASKS[next].label
     if (label && now !== text) label.textContent = text = now
