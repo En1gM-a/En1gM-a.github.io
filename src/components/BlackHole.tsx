@@ -2,12 +2,13 @@ import { useEffect, useRef, useState } from "react"
 import { motion } from "motion/react"
 import { BigBang } from "./BigBang"
 import { Plasma } from "./Plasma"
-import { PULL, PULL_FROM } from "./hole"
+import { PULL, PULL_FROM, holeFilm } from "./hole"
 import { holdScroll } from "../smoothScroll"
 
 const BLACKOUT_AT = 2300 // ms: the hole has swallowed everything, the view included; safe to jump to the top and restart
-const REVEAL_AT = BLACKOUT_AT + 250 // ms: the intro has taken over underneath, so the dark can lift
-const DONE_AT = REVEAL_AT + 650
+const FILM_BLACKOUT_AT = 3100 // ms: the same moment in the film, whose fall ends in the dark at 3 s
+const REVEAL_AFTER = 250 // ms: the intro has taken over underneath, so the dark can lift
+const LIFT = 650 // ms the dark takes to lift
 
 /** Spiral what is on screen into its centre: the page, the nav and the sky. Returns a function that puts it all back */
 function pull() {
@@ -46,13 +47,16 @@ function pull() {
  * the horizon and the dark swallows everything; in it a violet point of light
  * appears, the singularity the Big Bang intro starts from, so the intro picks
  * up from that same point.
+ * Once its film has loaded, the fall plays as that film instead, and its dark hands over the same way.
  */
 export function BlackHole({ onBlackout, onDone }: { onBlackout: () => void; onDone: () => void }) {
   const handlers = useRef({ onBlackout, onDone })
   handlers.current = { onBlackout, onDone }
   const [reveal, setReveal] = useState(false)
+  const [film] = useState(() => holeFilm)
 
   useEffect(() => {
+    const blackout = film ? FILM_BLACKOUT_AT : BLACKOUT_AT
     const release = pull()
     // Nothing scrolls while it falls in (the smooth scroller is told too, since it ignores prevented wheels)
     holdScroll(true)
@@ -62,9 +66,9 @@ export function BlackHole({ onBlackout, onDone }: { onBlackout: () => void; onDo
     const b = window.setTimeout(() => {
       release()
       handlers.current.onBlackout()
-    }, BLACKOUT_AT)
-    const r = window.setTimeout(() => setReveal(true), REVEAL_AT)
-    const c = window.setTimeout(() => handlers.current.onDone(), DONE_AT)
+    }, blackout)
+    const r = window.setTimeout(() => setReveal(true), blackout + REVEAL_AFTER)
+    const c = window.setTimeout(() => handlers.current.onDone(), blackout + REVEAL_AFTER + LIFT)
     return () => {
       window.clearTimeout(b)
       window.clearTimeout(r)
@@ -74,7 +78,7 @@ export function BlackHole({ onBlackout, onDone }: { onBlackout: () => void; onDo
       holdScroll(false)
       release()
     }
-  }, [])
+  }, [film])
 
   return (
     <motion.div
@@ -82,10 +86,26 @@ export function BlackHole({ onBlackout, onDone }: { onBlackout: () => void; onDo
       className="fixed inset-0 z-[95]"
       initial={{ opacity: 1 }}
       animate={{ opacity: reveal ? 0 : 1 }}
-      transition={{ duration: (DONE_AT - REVEAL_AT - 50) / 1000, ease: "easeOut" }}
+      transition={{ duration: (LIFT - 50) / 1000, ease: "easeOut" }}
     >
-      <Plasma bang kind="blackhole" />
-      <BigBang bang mode="infall" />
+      {film ? (
+        // It opens as a small hole in the dark; fading in, it lets the page be seen twisting away into it
+        <motion.video
+          src={film}
+          autoPlay
+          muted
+          playsInline
+          className="absolute inset-0 h-full w-full object-cover brightness-[.85]"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.8, ease: "easeIn" }}
+        />
+      ) : (
+        <>
+          <Plasma bang kind="blackhole" />
+          <BigBang bang mode="infall" />
+        </>
+      )}
     </motion.div>
   )
 }

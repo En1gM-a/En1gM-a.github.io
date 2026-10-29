@@ -13,6 +13,20 @@ const smooth = (a: number, b: number, v: number) => {
   return x * x * (3 - 2 * x)
 }
 
+/** The film of the fall (Veo 3.1 in Google Flow) as a local blob URL once loaded; empty until then, and the hole is drawn live */
+export let holeFilm = ""
+let asked = false
+
+/** Fetch the film into memory, once, as "Back to orbit" comes near, so it plays without waiting on the network */
+export function preloadHoleFilm() {
+  if (asked) return
+  asked = true
+  fetch(`${import.meta.env.BASE_URL}media/black-hole.mp4`)
+    .then((r) => (r.ok ? r.blob() : Promise.reject()))
+    .then((b) => (holeFilm = URL.createObjectURL(b)))
+    .catch(() => {})
+}
+
 /** The horizon's radius t seconds after the hole opens, in units of the screen's shorter side */
 export function horizon(t: number) {
   // Falling toward it, it grows the way anything ahead does: slowly, then all at once

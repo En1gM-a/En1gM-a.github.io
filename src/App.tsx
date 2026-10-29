@@ -9,6 +9,7 @@ import { Skills } from "./components/Skills"
 import { Projects } from "./components/Projects"
 import { Contact } from "./components/Contact"
 import { BlackHole } from "./components/BlackHole"
+import { preloadHoleFilm } from "./components/hole"
 import { WarpJump } from "./components/WarpJump"
 import { STAGE, useIntro } from "./hooks/useIntro"
 import { profile } from "./data/content"
@@ -70,14 +71,19 @@ export default function App() {
         </div>
       </main>
 
-      <footer className="gutter flex flex-col gap-3 border-t border-line py-8 font-mono text-xs text-faint sm:flex-row sm:items-center sm:justify-between">
+      {/* The film behind "Back to orbit" loads as the footer comes near, so only visitors who get this far fetch it */}
+      <motion.footer
+        onViewportEnter={reduce ? undefined : preloadHoleFilm}
+        viewport={{ once: true, margin: "1200px" }}
+        className="gutter flex flex-col gap-3 border-t border-line py-8 font-mono text-xs text-faint sm:flex-row sm:items-center sm:justify-between"
+      >
         <p>
           © {new Date().getFullYear()} {profile.name} <span className="text-cyan">//</span> Transmission end
         </p>
         <a href="#home" onClick={backToOrbit} className="flex min-h-11 items-center hover:text-ink">
           Back to orbit ↑
         </a>
-      </footer>
+      </motion.footer>
       {falling && <BlackHole onBlackout={restart} onDone={() => setFalling(false)} />}
       <WarpJump />
     </MotionConfig>
