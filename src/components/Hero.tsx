@@ -73,6 +73,8 @@ function IntroStage({ stage, onSkip }: { stage: number; onSkip: () => void }) {
   const banged = stage >= STAGE.bang
   // Where the first stars will ignite: the shader clears the fog there, the particles light the stars
   const [clumps] = useState(() => makeClumps(window.innerWidth, window.innerHeight))
+  // Taken once: a film that finished loading mid-intro would otherwise cut in at the next stage
+  const [film] = useState(() => filmUrl)
   const clockRef = useRef<HTMLSpanElement>(null)
   const heatRef = useRef<HTMLSpanElement>(null)
   // The clock keeps time with the bang itself, as the shader and the particles do
@@ -110,9 +112,9 @@ function IntroStage({ stage, onSkip }: { stage: number; onSkip: () => void }) {
       // Fades away as the page arrives (or on skip) instead of vanishing in one frame
       exit={{ opacity: 0, transition: { duration: 0.6, ease: [0.16, 1, 0.3, 1] } }}
     >
-      {/* The Big Bang film (Wan 3.0 via Higgsfield, after NASA's visualisation); drawn live if it could not load */}
-      {filmUrl ? (
-        <video src={filmUrl} autoPlay muted playsInline aria-hidden className="absolute inset-0 h-full w-full object-cover brightness-[.85]" />
+      {/* The Big Bang film (Veo 3.1 in Google Flow, after NASA's visualisation); drawn live if it could not load */}
+      {film ? (
+        <video src={film} autoPlay muted playsInline aria-hidden className="absolute inset-0 h-full w-full object-cover brightness-[.85]" />
       ) : (
         <>
           <Plasma bang={banged} clumps={clumps} />
@@ -121,7 +123,7 @@ function IntroStage({ stage, onSkip }: { stage: number; onSkip: () => void }) {
       )}
 
       {/* The singularity: a violet point of light gathering calmly, then blooming into the glow that fills everything (the film has its own) */}
-      {!filmUrl && (
+      {!film && (
       <motion.span
         aria-hidden
         className="absolute top-1/2 left-1/2 -mt-[5px] -ml-[5px] size-[10px] rounded-full bg-white shadow-[0_0_12px_4px_rgba(214,196,255,0.9),0_0_48px_16px_rgba(150,110,255,0.45),0_0_110px_36px_rgba(110,70,220,0.25)]"
