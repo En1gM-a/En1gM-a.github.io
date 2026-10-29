@@ -15,10 +15,11 @@ export const BANG_AT = 1150
 
 const TIMELINE: [number, number][] = [
   [STAGE.bang, BANG_AT],
-  [STAGE.letters, 2000],
-  [STAGE.decrypt, 3000],
-  [STAGE.settle, 3950],
-  [STAGE.done, 4800],
+  [STAGE.letters, 1900],
+  // KARL'S decrypts in by ~2.45 s and holds clean until here, long enough to read
+  [STAGE.decrypt, 3300],
+  [STAGE.settle, 4250],
+  [STAGE.done, 5100],
 ]
 
 export function useIntro() {

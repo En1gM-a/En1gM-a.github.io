@@ -13,15 +13,10 @@ import { profile } from "../data/content"
 const NAME = "KARL'S"
 const WORD = "PORTFOLIO"
 
-// The letters condense out of the fog where they stand, a little out of step, like the first stars
-// (one per letter; a longer name reuses them in turn)
-const DELAYS = [0.08, 0, 0.14, 0.04, 0.18, 0.1]
-
-// RGB split the letters carry as they condense, settling to a clean edge; a soft dark halo keeps them
-// readable over the brightest fog in the film
+// The name glitch-decrypts in the way PORTFOLIO does, a letter about every 90 ms, then holds clean long
+// enough to read before PORTFOLIO takes over; a soft dark halo keeps it readable over the brightest fog
+const NAME_IN = 550 // ms
 const HALO = "0 0.03em 0.5em rgba(3,4,9,0.85)"
-const SPLIT = `-0.09em 0 0 rgba(34,211,238,0.85), 0.09em 0 0 rgba(244,114,182,0.85), ${HALO}`
-const CLEAN = `0em 0 0 rgba(34,211,238,0), 0em 0 0 rgba(244,114,182,0), ${HALO}`
 
 const LOG: [number, string, string][] = [
   [STAGE.spark, "singularity", "detected"],
@@ -76,6 +71,7 @@ function IntroStage({ stage, onSkip }: { stage: number; onSkip: () => void }) {
   const [clumps] = useState(() => makeClumps(window.innerWidth, window.innerHeight))
   // Taken once: a film that finished loading mid-intro would otherwise cut in at the next stage
   const [film] = useState(() => filmUrl)
+  const name = useScramble("", NAME, stage >= STAGE.letters, NAME_IN)
   const clockRef = useRef<HTMLSpanElement>(null)
   const heatRef = useRef<HTMLSpanElement>(null)
   // The clock keeps time with the bang itself, as the shader and the particles do
@@ -136,32 +132,18 @@ function IntroStage({ stage, onSkip }: { stage: number; onSkip: () => void }) {
       )}
 
       {stage < STAGE.decrypt && (
-        // Same PORTFOLIO-wide box as the decrypting word, so KARL'S stays put when the glyphs take over
+        // Same PORTFOLIO-wide box and the same glitching text as the decrypting word, so KARL'S stays put
+        // when PORTFOLIO's glyphs take over
         <div className="display hero-word grid" aria-hidden>
           <span className="invisible col-start-1 row-start-1 whitespace-nowrap">{WORD}</span>
-          <div className="col-start-1 row-start-1 flex items-end">
-            {NAME.split("").map((ch, i) => (
-              <motion.span
-                key={ch + i}
-                className="silver inline-block"
-                initial={{ opacity: 0 }}
-                animate={
-                  stage >= STAGE.letters
-                    ? { opacity: [0, 1], scale: [1.18, 1], filter: ["blur(14px)", "blur(0px)"], textShadow: [SPLIT, CLEAN] }
-                    : undefined
-                }
-                transition={{
-                  duration: 0.9,
-                  delay: DELAYS[i % DELAYS.length],
-                  ease: [0.22, 1, 0.36, 1],
-                  opacity: { duration: 0.5, delay: DELAYS[i % DELAYS.length] },
-                  textShadow: { duration: 0.9, delay: DELAYS[i % DELAYS.length] + 0.15, ease: "easeOut" },
-                }}
-              >
-                {ch}
-              </motion.span>
-            ))}
-          </div>
+          <span
+            className="silver glitch col-start-1 row-start-1 whitespace-nowrap [contain:inline-size]"
+            data-text={name}
+            data-glitch={name && name !== NAME ? "on" : "off"}
+            style={{ textShadow: HALO }}
+          >
+            {name}
+          </span>
         </div>
       )}
 
