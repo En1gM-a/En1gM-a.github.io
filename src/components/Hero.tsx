@@ -208,8 +208,9 @@ function IntroFilm() {
       variants={filmOut}
       exit="out"
       style={{ filter: "brightness(0.85)" }}
-      // Over the intro's vignette; under its chrome, the title and the portrait
-      className="pointer-events-none fixed inset-0 z-[31] h-full w-full object-cover"
+      // Over the intro's vignette; under its chrome, the title and the portrait. Part of the hero rather than fixed,
+      // so scrolling on while it still fades takes it away with the hero instead of leaving it over About
+      className="pointer-events-none absolute inset-0 z-[31] h-full w-full object-cover"
     />
   )
 }
