@@ -74,7 +74,7 @@ export default function App() {
       {/* The film behind "Back to orbit" loads as the footer comes near, so only visitors who get this far fetch it */}
       <motion.footer
         onViewportEnter={reduce ? undefined : preloadHoleFilm}
-        viewport={{ once: true, margin: "1200px" }}
+        viewport={{ once: true, margin: "3000px" }}
         className="gutter flex flex-col gap-3 border-t border-line py-8 font-mono text-xs text-faint sm:flex-row sm:items-center sm:justify-between"
       >
         <p>

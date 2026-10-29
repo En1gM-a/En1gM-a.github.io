@@ -11,7 +11,8 @@ const REVEAL_AFTER = 250 // ms: the intro has taken over underneath, so the dark
 const LIFT = 650 // ms the dark takes to lift
 // The hole the film is seen through, in vmax: it opens small, then swells past every corner as the viewer falls in
 const HOLE = [0, 9, 90]
-const opening: Transition = { duration: 1.6, times: [0, 0.2, 1], ease: ["easeOut", [0.7, 0, 0.84, 0]] }
+// Ease-in quad: close to the exponential way anything ahead looms, without stalling at the start
+const opening: Transition = { duration: 1.6, times: [0, 0.2, 1], ease: ["easeOut", [0.55, 0.085, 0.68, 0.53]] }
 
 /** Spiral what is on screen into its centre: the page, the nav and the sky. Returns a function that puts it all back */
 function pull() {
