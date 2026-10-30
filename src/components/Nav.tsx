@@ -44,6 +44,19 @@ export function Nav({ visible }: { visible: boolean }) {
     return () => window.removeEventListener("keydown", onKey)
   }, [open])
 
+  // The number keys 1-5 go to the sections the way the links do, hyperspace jump and all
+  useEffect(() => {
+    if (!visible) return
+    const onKey = (e: KeyboardEvent) => {
+      const link = LINKS[Number(e.key) - 1]
+      if (!link || e.repeat || e.metaKey || e.ctrlKey || e.altKey) return
+      if ((e.target as Element | null)?.closest?.("input, textarea, select, [contenteditable]")) return
+      document.querySelector<HTMLAnchorElement>(`header a[href="#${link.id}"]`)?.click()
+    }
+    window.addEventListener("keydown", onKey)
+    return () => window.removeEventListener("keydown", onKey)
+  }, [visible])
+
   return (
     <motion.header
       className={`fixed inset-x-0 top-0 z-50 transition-[background-color,border-color] duration-300 ${
@@ -60,10 +73,11 @@ export function Nav({ visible }: { visible: boolean }) {
         </a>
 
         <ul className="hidden items-center gap-1 md:flex">
-          {LINKS.map((l) => (
+          {LINKS.map((l, i) => (
             <li key={l.id}>
               <a
                 href={`#${l.id}`}
+                aria-keyshortcuts={String(i + 1)}
                 aria-current={active === l.id ? "true" : undefined}
                 className={`relative block px-3 py-2 text-[11px] font-semibold tracking-[0.16em] uppercase transition-colors ${
                   active === l.id ? "text-ink" : "text-dim hover:text-ink"

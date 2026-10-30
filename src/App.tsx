@@ -3,6 +3,7 @@ import { MotionConfig, motion, useReducedMotion, useScroll, useSpring } from "mo
 import { GalaxyBackground } from "./components/GalaxyBackground"
 import { Nav } from "./components/Nav"
 import { Reticle } from "./components/fx/Reticle"
+import { Shockwave } from "./components/fx/Shockwave"
 import { Hero } from "./components/Hero"
 import { About } from "./components/About"
 import { Skills } from "./components/Skills"
@@ -59,6 +60,7 @@ export default function App() {
       />
       {online && <ScrollProgress />}
       {online && <Reticle />}
+      {online && <Shockwave />}
       <Nav visible={online} />
 
       <main id="main">
