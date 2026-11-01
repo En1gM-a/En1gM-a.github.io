@@ -1,0 +1,195 @@
+<!--
+  Sugbo Now demo (10 s loop; its screen is 1280x696, the inside of the site's browser frame, centred at top 52).
+  Sugbo Now is in development and its frontend is still a title page ("Cebu, right now, for you."), so this
+  recreates the product as the project describes it: an AI daily brief, live alerts from four sources on a map
+  of Cebu, and a suggested leave time. Laid out at 640x348 and drawn at 2x; coordinates are design pixels.
+-->
+<template>
+  <style>
+    #root { position: absolute; inset: 0; background: #030409; }
+    #s-stage { position: absolute; left: 0; top: 52px; width: 1280px; height: 696px; overflow: hidden; background: #0a1020; }
+    .s-screen { position: absolute; left: 0; top: 0; width: 640px; height: 348px; zoom: 2; overflow: hidden;
+      font-family: Inter, sans-serif; color: #fff; }
+    .s-cam { position: absolute; left: 0; top: 0; width: 640px; height: 348px; transform-origin: 0 0; background: #0a1020; }
+    .s-abs { position: absolute; }
+    .s-mono { font-family: "JetBrains Mono", monospace; }
+    .s-card { position: absolute; border-radius: 10px; border: 1px solid rgb(255 255 255 / 0.09); background: rgb(255 255 255 / 0.035); }
+    .s-alert { position: absolute; left: 12px; width: 232px; height: 30px; border-radius: 8px; background: rgb(255 255 255 / 0.04);
+      display: flex; align-items: center; gap: 8px; padding: 0 9px; }
+    .s-alert i { flex: none; width: 7px; height: 7px; border-radius: 50%; }
+    .s-alert b { display: block; font-size: 8px; font-weight: 600; color: rgb(255 255 255 / 0.88); }
+    .s-alert span { display: block; margin-top: 1px; font-size: 6.5px; color: rgb(255 255 255 / 0.45); }
+    .s-pin { position: absolute; width: 0; height: 0; }
+    .s-pin i { position: absolute; left: -5px; top: -5px; width: 10px; height: 10px; border-radius: 50%; border: 2px solid #0d1830; }
+    .s-pin u { position: absolute; left: -10px; top: -10px; width: 20px; height: 20px; border-radius: 50%; opacity: 0.4; }
+    .s-chip { position: absolute; padding: 3px 7px; border-radius: 6px; background: rgb(0 0 0 / 0.45); font-size: 6.5px; color: rgb(255 255 255 / 0.7); }
+    #s-tip { position: absolute; left: 0; top: 0; width: 128px; padding: 6px 8px; border-radius: 7px; background: #0b1226;
+      border: 1px solid rgb(251 191 36 / 0.45); box-shadow: 0 8px 22px rgb(0 0 0 / 0.5); }
+    #s-tip b { display: block; font-size: 7.5px; color: #fde68a; }
+    #s-tip span { display: block; margin-top: 2px; font-size: 6.5px; color: rgb(255 255 255 / 0.65); }
+    #s-toast { position: absolute; left: 228px; top: 302px; width: 184px; height: 28px; border-radius: 8px; background: #10203a;
+      border: 1px solid rgb(103 232 249 / 0.35); display: flex; align-items: center; gap: 7px; padding: 0 10px; font-size: 7.5px;
+      box-shadow: 0 8px 24px rgb(0 0 0 / 0.5); }
+    #s-cursor { position: absolute; left: 0; top: 0; width: 14px; height: 20px; transform-origin: 1px 1px; filter: drop-shadow(0 1px 1.5px rgb(0 0 0 / 0.6)); }
+    #s-ring { position: absolute; left: -14px; top: -14px; width: 28px; height: 28px; border-radius: 50%; border: 2px solid #67e8f9; }
+  </style>
+  <div data-hf-id="hf-ooz9" id="root" data-composition-id="sugbo" data-width="1280" data-height="800">
+    <div data-hf-id="hf-isrx" id="s-stage">
+      <div data-hf-id="hf-4e88" class="s-screen">
+        <div data-hf-id="hf-br08" class="s-cam" id="s-cam">
+          <!-- Top bar -->
+          <div data-hf-id="hf-70f1" class="s-abs" style="left: 12px; top: 9px; display: flex; align-items: center; gap: 7px">
+            <svg data-hf-id="hf-9u10" width="14" height="14" viewBox="0 0 24 24"><circle data-hf-id="hf-uklj" cx="12" cy="12" r="4.5" fill="#67e8f9" /><g data-hf-id="hf-0l3k" stroke="#67e8f9" stroke-width="2" stroke-linecap="round"><path data-hf-id="hf-9x8u" d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M4.9 19.1l1.8-1.8M17.3 6.7l1.8-1.8" /></g></svg>
+            <span data-hf-id="hf-f2v3" style="font-size: 11px; font-weight: 700">Sugbo Now</span>
+            <span data-hf-id="hf-j46g" style="font-size: 7.5px; color: rgb(255 255 255 / 0.45)">Cebu, right now, for you.</span>
+          </div>
+          <div data-hf-id="hf-8roh" class="s-abs s-mono" style="right: 38px; top: 12px; font-size: 7px; color: rgb(255 255 255 / 0.5)">Tue, Nov 3 · 6:48 AM</div>
+          <div data-hf-id="hf-ivin" class="s-abs" style="right: 12px; top: 8px; width: 18px; height: 18px; border-radius: 50%; background: #67e8f9; color: #04202e; font-size: 8px; font-weight: 700; display: grid; place-items: center">K</div>
+
+          <!-- The AI brief -->
+          <div data-hf-id="hf-rwls" class="s-card" style="left: 12px; top: 38px; width: 232px; height: 94px">
+            <div data-hf-id="hf-1nxd" class="s-abs s-mono" style="left: 10px; top: 9px; font-size: 6.5px; letter-spacing: 0.18em; color: #67e8f9">CEBU DAILY BRIEF</div>
+            <div data-hf-id="hf-by8p" class="s-abs" style="left: 10px; top: 21px; font-size: 11px; font-weight: 600">Good morning, Karl</div>
+            <div data-hf-id="hf-tzt5" class="s-abs" style="left: 10px; top: 38px; width: 212px; font-size: 8px; line-height: 1.45; color: rgb(255 255 255 / 0.75)"><span data-hf-id="hf-2vqu" id="s-brief"></span><span data-hf-id="hf-klcm" id="s-caret" style="display: inline-block; width: 3px; height: 8px; margin-left: 1px; vertical-align: -1px; background: #67e8f9"></span></div>
+            <div data-hf-id="hf-bcyj" class="s-abs" id="s-src" style="left: 10px; top: 80px; font-size: 6px; color: rgb(255 255 255 / 0.35)">Written by AI from 4 live sources</div>
+          </div>
+
+          <!-- Suggested leave time -->
+          <div data-hf-id="hf-ljqh" class="s-card" id="s-leave" style="left: 12px; top: 140px; width: 232px; height: 46px; border-color: rgb(252 211 77 / 0.3); background: rgb(252 211 77 / 0.08)">
+            <div data-hf-id="hf-490k" class="s-abs" style="left: 10px; top: 9px; font-size: 7.5px; color: rgb(253 230 138 / 0.8)">Suggested leave time</div>
+            <div data-hf-id="hf-dofp" class="s-abs s-mono" id="s-time" style="left: 10px; top: 20px; font-size: 15px; font-weight: 700; color: #fde68a">--:--</div>
+            <div data-hf-id="hf-s7az" class="s-abs" id="s-beat" style="left: 92px; top: 26px; font-size: 6.5px; color: rgb(253 230 138 / 0.6)">18 min ahead of the jam</div>
+            <div data-hf-id="hf-xly7" class="s-abs" id="s-btn" style="left: 186px; top: 9px; padding: 4px 7px; border-radius: 6px; background: rgb(252 211 77 / 0.18); font-size: 6.5px; font-weight: 600; color: #fde68a">Set reminder</div>
+          </div>
+
+          <!-- Live alerts -->
+          <div data-hf-id="hf-fm4m" class="s-alert" id="s-a0" style="top: 194px"><i data-hf-id="hf-7zvw" style="background: #fbbf24"></i><div data-hf-id="hf-yeow"><b data-hf-id="hf-h6hm">Heavy traffic · Osmeña Blvd</b><span data-hf-id="hf-ubbp">Until 8:30 AM · TomTom</span></div></div>
+          <div data-hf-id="hf-mwnw" class="s-alert" id="s-a1" style="top: 230px"><i data-hf-id="hf-h9s9" style="background: #60a5fa"></i><div data-hf-id="hf-y7yw"><b data-hf-id="hf-ii6v">Flood advisory · Mambaling</b><span data-hf-id="hf-ghzm">Knee-deep since 5 AM · LGU Cebu</span></div></div>
+          <div data-hf-id="hf-j6qs" class="s-alert" id="s-a2" style="top: 266px"><i data-hf-id="hf-juzj" style="background: #a78bfa"></i><div data-hf-id="hf-x11t"><b data-hf-id="hf-atl8">Power interruption · Talamban</b><span data-hf-id="hf-g0np">1:00 to 3:00 PM · VECO</span></div></div>
+          <div data-hf-id="hf-a46s" class="s-alert" id="s-a3" style="top: 302px"><i data-hf-id="hf-6lfb" style="background: #67e8f9"></i><div data-hf-id="hf-xfcu"><b data-hf-id="hf-k0cr">Light rain after 3 PM</b><span data-hf-id="hf-hhcq">60% chance · Open-Meteo</span></div></div>
+
+          <!-- The map -->
+          <div data-hf-id="hf-3lzi" class="s-card" style="left: 252px; top: 38px; width: 376px; height: 298px; overflow: hidden; background: #0d1830">
+            <svg data-hf-id="hf-95uk" class="s-abs" style="left: 0; top: 0" width="376" height="298" viewBox="0 0 376 298">
+              <path data-hf-id="hf-s2td" d="M376 170 C 330 190, 300 230, 290 298 L 376 298 Z" fill="#0a1328" />
+              <path data-hf-id="hf-lpza" d="M330 298 C 340 260, 352 236, 376 222" stroke="rgb(103 232 249 / 0.08)" stroke-width="1" fill="none" />
+              <g data-hf-id="hf-gojs" fill="none" stroke="rgb(255 255 255 / 0.1)" stroke-linecap="round">
+                <path data-hf-id="hf-bvmv" d="M0 64 C 80 72, 160 52, 376 60" stroke-width="2.4" />
+                <path data-hf-id="hf-e30d" d="M300 0 C 280 80, 220 110, 190 140 S 120 210, 70 298" stroke-width="2.4" />
+                <path data-hf-id="hf-d8f5" d="M0 250 C 90 240, 160 262, 300 250" stroke-width="2.4" />
+                <path data-hf-id="hf-1u6p" d="M120 0 C 130 60, 150 120, 210 170 S 270 230, 290 298" stroke-width="1.4" />
+                <path data-hf-id="hf-v1xz" d="M0 160 C 70 150, 140 170, 230 150 S 330 120, 376 118" stroke-width="1.4" />
+                <path data-hf-id="hf-culh" d="M40 0 L 60 298" stroke-width="1" />
+                <path data-hf-id="hf-nphl" d="M0 110 C 60 120, 90 100, 150 104" stroke-width="1" />
+                <path data-hf-id="hf-zk32" d="M200 0 C 210 40, 250 70, 376 82" stroke-width="1" />
+              </g>
+              <g data-hf-id="hf-30ze" font-family="Inter" font-size="6" fill="rgb(255 255 255 / 0.32)">
+                <text data-hf-id="hf-6zlz" x="304" y="28">Talamban</text><text data-hf-id="hf-k5vc" x="150" y="92">Lahug</text><text data-hf-id="hf-i88d" x="128" y="150">Capitol</text>
+                <text data-hf-id="hf-bacx" x="36" y="282">Mambaling</text><text data-hf-id="hf-xscy" x="210" y="226">Colon</text><text data-hf-id="hf-tskp" x="312" y="262">Mactan Channel</text>
+              </g>
+              <path data-hf-id="hf-t3gd" id="s-route" d="M318 40 C 290 80, 232 106, 196 138 S 128 206, 100 236 S 80 252, 74 258" fill="none" stroke="#67e8f9" stroke-width="2.2" stroke-linecap="round" pathLength="1" stroke-dasharray="1 1" />
+              <circle data-hf-id="hf-zh93" cx="318" cy="40" r="4" fill="#fff" />
+              <text data-hf-id="hf-6j3e" x="326" y="44" font-family="Inter" font-size="6.5" font-weight="600" fill="#fff">Home</text>
+              <rect data-hf-id="hf-a5xz" x="56" y="262" width="36" height="12" rx="3" fill="#67e8f9" />
+              <text data-hf-id="hf-3akt" x="61" y="270.5" font-family="Inter" font-size="6.5" font-weight="700" fill="#04202e">CIT-U</text>
+            </svg>
+            <div data-hf-id="hf-g92r" class="s-pin" id="s-p0" style="left: 190px; top: 140px"><u data-hf-id="hf-ef7s" style="background: #fbbf24"></u><i data-hf-id="hf-8qh0" style="background: #fbbf24"></i></div>
+            <div data-hf-id="hf-xwbz" class="s-pin" id="s-p1" style="left: 92px; top: 236px"><u data-hf-id="hf-8tf9" style="background: #60a5fa"></u><i data-hf-id="hf-bk59" style="background: #60a5fa"></i></div>
+            <div data-hf-id="hf-eavu" class="s-pin" id="s-p2" style="left: 336px; top: 62px"><u data-hf-id="hf-8cz7" style="background: #a78bfa"></u><i data-hf-id="hf-a97j" style="background: #a78bfa"></i></div>
+            <div data-hf-id="hf-zhpe" class="s-pin" id="s-p3" style="left: 116px; top: 58px"><u data-hf-id="hf-comz" style="background: #67e8f9"></u><i data-hf-id="hf-tcdz" style="background: #67e8f9"></i></div>
+            <div data-hf-id="hf-s28j" class="s-chip" style="right: 8px; top: 8px">☁ 28°C · Light rain 3 PM</div>
+            <div data-hf-id="hf-3tqd" class="s-chip s-mono" style="left: 8px; bottom: 8px; font-size: 6px">TomTom · Open-Meteo · SunStar</div>
+          </div>
+
+          <div data-hf-id="hf-zn6s" id="s-tip"><b data-hf-id="hf-2gce">Heavy traffic · Osmeña Blvd</b><span data-hf-id="hf-9ho2">+18 min on your route · until 8:30 AM</span></div>
+          <div data-hf-id="hf-s33q" id="s-toast">
+            <svg data-hf-id="hf-9hk3" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#67e8f9" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path data-hf-id="hf-ukll" d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9M10.3 21a1.94 1.94 0 0 0 3.4 0" /></svg>
+            <span data-hf-id="hf-oiba">Reminder set · Leave at <b data-hf-id="hf-xnbc" style="color: #fde68a">7:12 AM</b></span>
+          </div>
+          <div data-hf-id="hf-ccdr" id="s-ring"></div>
+          <svg data-hf-id="hf-4qne" id="s-cursor" viewBox="0 0 14 20"><path data-hf-id="hf-i6ql" d="M1 1v15.5l4-3.6 2.6 5.8 2.6-1.1-2.6-5.7h5.2Z" fill="#fff" stroke="#0a1020" stroke-width="1.2" stroke-linejoin="round" /></svg>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script>
+    ;(() => {
+      const { seg, mix, ease, keys, typed, caret, press, ring, camera } = kit
+      const $ = (id) => document.getElementById(id)
+      const BRIEF = "Heavy traffic on Osmeña Blvd until 8:30. Light rain after 3 PM, so bring an umbrella. Power is out in Talamban from 1 to 3 PM."
+      const ALERT_AT = [1.0, 1.4, 1.8, 2.2]
+      const MAP = { x: 252, y: 38 } // the map card's corner, to place things over its pins
+      const PIN = { x: MAP.x + 190, y: MAP.y + 140 } // the Osmeña traffic pin
+      const PATH = [
+        { t: 0, x: 560, y: 318 },
+        { t: 3.3, x: 560, y: 318 },
+        { t: 4.3, x: PIN.x + 3, y: PIN.y + 2 },
+        { t: 5.9, x: PIN.x + 3, y: PIN.y + 2 },
+        { t: 6.6, x: 210, y: 158 },
+        { t: 9.2, x: 210, y: 158 },
+        { t: 10, x: 560, y: 318 },
+      ]
+      const CLICK = 6.75
+      const CAM = [
+        { t: 0, z: 1, x: 320, y: 174 },
+        { t: 3.5, z: 1, x: 320, y: 174 },
+        { t: 4.4, z: 1.55, x: PIN.x - 10, y: PIN.y + 8 },
+        { t: 5.8, z: 1.55, x: PIN.x - 10, y: PIN.y + 8 },
+        { t: 6.5, z: 1, x: 320, y: 174 },
+      ]
+
+      const tl = kit.run(10, (t) => {
+        // Everything that happened fades back out at the end, so the loop starts clean
+        const keep = 1 - ease.in(seg(t, 9.3, 9.9))
+
+        const text = typed(BRIEF, t, 0.35, 52)
+        $("s-brief").textContent = text
+        $("s-brief").style.opacity = String(keep)
+        $("s-caret").style.opacity = String(caret(t, text.length > 0 && text.length < BRIEF.length) * keep)
+        $("s-src").style.opacity = String(ease.out(seg(t, 2.8, 3.2)) * keep)
+
+        $("s-route").style.strokeDashoffset = String(1 - ease.inOut(seg(t, 0.6, 2.6)))
+        $("s-route").style.opacity = String(keep)
+        ALERT_AT.forEach((at, i) => {
+          const a = ease.out(seg(t, at, at + 0.35))
+          const row = $(`s-a${i}`)
+          row.style.opacity = String(a * keep)
+          row.style.transform = `translateX(${(1 - a) * -10}px)`
+          const pin = $(`s-p${i}`)
+          pin.style.opacity = String(a * keep)
+          pin.style.transform = `scale(${ease.back(seg(t, at, at + 0.4))})`
+          // Each pin pings once a second
+          const ping = ((t - at) % 1.2) / 1.2
+          pin.querySelector("u").style.transform = `scale(${t > at ? mix(0.4, 1.8, ping) : 0})`
+          pin.querySelector("u").style.opacity = String(t > at ? 0.45 * (1 - ping) : 0)
+        })
+
+        // The leave time is worked out from the alerts
+        const lt = seg(t, 2.6, 3.3)
+        const mins = 6 * 60 + 48 + Math.round(24 * ease.out(lt))
+        $("s-time").textContent = lt > 0 && keep > 0.02 ? `${Math.floor(mins / 60)}:${String(mins % 60).padStart(2, "0")} AM` : "--:--"
+        $("s-time").style.textShadow = `0 0 ${12 * Math.sin(Math.PI * seg(t, 3.0, 3.8))}px rgb(253 230 138 / 0.8)`
+        $("s-beat").style.opacity = String(ease.out(seg(t, 3.2, 3.6)) * keep)
+        $("s-btn").style.background = `rgb(252 211 77 / ${0.18 + 0.25 * press(t, CLICK)})`
+
+        // Hovering the traffic pin shows its delay; the reminder confirms
+        const tip = kit.window(t, 4.35, 5.9, 0.2)
+        $("s-tip").style.opacity = String(tip)
+        $("s-tip").style.transform = `translate(${PIN.x - 64}px, ${PIN.y - 46 + (1 - tip) * 5}px)`
+        const toast = Math.min(ease.out(seg(t, 6.85, 7.2)), 1 - ease.in(seg(t, 8.7, 9.1)))
+        $("s-toast").style.opacity = String(toast)
+        $("s-toast").style.transform = `translateY(${(1 - toast) * 10}px)`
+
+        const p = keys(PATH, t)
+        $("s-cursor").style.transform = `translate(${p.x}px, ${p.y}px) scale(${1 - 0.18 * press(t, CLICK)})`
+        const r = ring(t, CLICK)
+        $("s-ring").style.transform = `translate(${p.x}px, ${p.y}px) scale(${r.s})`
+        $("s-ring").style.opacity = String(r.o)
+        const k = keys(CAM, t)
+        $("s-cam").style.transform = camera(k.z, k.x, k.y, 640, 348)
+      })
+      window.__timelines = window.__timelines || {}
+      window.__timelines["sugbo"] = tl
+    })()
+  </script>
+</template>

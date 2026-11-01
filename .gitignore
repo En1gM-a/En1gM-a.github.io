@@ -5,3 +5,7 @@ dist
 .playwright-mcp
 .claude/settings.local.json
 *.tsbuildinfo
+
+# HyperFrames: snapshots, history and renders stay local
+demos/.hyperframes/
+demos/renders/

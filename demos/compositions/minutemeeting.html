@@ -1,0 +1,194 @@
+<!--
+  MinuteMeeting demo (10 s loop; its screen is the whole 1280x800 card).
+  Recreated from the bot's code: the /meeting command group and its subcommands and descriptions
+  (bot/commands.py), the export formats (Markdown, Word document, PDF) and "Final meeting minutes" (bot/embeds.py),
+  with minutes refreshed every five minutes. Discord's own dark UI around it.
+  Laid out at 640x400 and drawn at 2x; coordinates are design pixels.
+-->
+<template>
+  <style>
+    #root { position: absolute; inset: 0; background: #030409; }
+    #m-stage { position: absolute; left: 0; top: 0; width: 1280px; height: 800px; overflow: hidden; background: #313338; }
+    .m-screen { position: absolute; left: 0; top: 0; width: 640px; height: 400px; zoom: 2; overflow: hidden;
+      font-family: Inter, sans-serif; color: #dbdee1; }
+    .m-cam { position: absolute; left: 0; top: 0; width: 640px; height: 400px; transform-origin: 0 0; background: #313338; }
+    .m-abs { position: absolute; }
+    .m-rail { position: absolute; left: 0; top: 0; width: 36px; height: 400px; background: #1e1f22; }
+    .m-srv { position: absolute; left: 5px; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; font-size: 8px; font-weight: 700; color: #fff; }
+    .m-side { position: absolute; left: 36px; top: 0; width: 120px; height: 400px; background: #2b2d31; }
+    .m-cat { position: absolute; left: 10px; font-size: 6px; font-weight: 700; letter-spacing: 0.04em; color: #949ba4; }
+    .m-ch { position: absolute; left: 6px; width: 108px; height: 15px; border-radius: 4px; padding: 0 6px; display: flex; align-items: center; gap: 4px; font-size: 8px; color: #949ba4; }
+    .m-ch b { font-weight: 400; color: #80848e; font-size: 10px; }
+    .m-chat { position: absolute; left: 156px; top: 0; width: 484px; height: 400px; }
+    .m-list { position: absolute; left: 0; right: 0; top: 26px; bottom: 44px; overflow: hidden; }
+    .m-col { position: absolute; left: 0; right: 0; bottom: 6px; display: flex; flex-direction: column; justify-content: flex-end; }
+    .m-msg { display: flex; gap: 9px; padding: 4px 12px; }
+    .m-av { flex: none; width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; font-size: 8px; font-weight: 700; color: #111; }
+    .m-head { font-size: 8px; font-weight: 600; display: flex; align-items: center; gap: 5px; }
+    .m-time { font-size: 6px; font-weight: 400; color: #949ba4; }
+    .m-bot { padding: 0 3px; border-radius: 3px; background: #5865f2; color: #fff; font-size: 5.5px; font-weight: 700; line-height: 9px; }
+    .m-text { margin-top: 2px; font-size: 8px; line-height: 1.4; color: #dbdee1; }
+    .m-used { font-size: 6.5px; color: #949ba4; margin: 0 0 2px 31px; }
+    .m-used b { color: #c9cdfb; font-weight: 500; }
+    .m-embed { margin-top: 4px; width: 300px; border-left: 3px solid #5865f2; border-radius: 4px; background: #2b2d31; padding: 7px 9px; }
+    .m-embed h4 { font-size: 8px; font-weight: 700; color: #fff; }
+    .m-embed p { margin-top: 2px; font-size: 7px; line-height: 1.45; color: #dbdee1; }
+    .m-embed h5 { margin-top: 6px; font-size: 6.5px; font-weight: 700; color: #fff; }
+    .m-embed small { display: block; margin-top: 6px; font-size: 5.5px; color: #949ba4; }
+    .m-input { position: absolute; left: 12px; right: 12px; bottom: 12px; height: 26px; border-radius: 8px; background: #383a40; display: flex; align-items: center; gap: 8px; padding: 0 10px; font-size: 8px; }
+    .m-pop { position: absolute; left: 12px; right: 12px; bottom: 42px; border-radius: 8px; background: #2b2d31; border: 1px solid #1e1f22; padding: 5px; box-shadow: 0 8px 18px rgb(0 0 0 / 0.35); }
+    .m-pop h6 { font-size: 6px; font-weight: 700; letter-spacing: 0.04em; color: #949ba4; padding: 2px 5px 4px; }
+    .m-row { display: flex; align-items: baseline; gap: 8px; padding: 4px 6px; border-radius: 4px; font-size: 7.5px; }
+    .m-row b { color: #fff; font-weight: 600; }
+    .m-row span { color: #949ba4; font-size: 6.5px; }
+    .m-file { margin-top: 6px; display: flex; align-items: center; gap: 7px; width: 220px; padding: 6px 8px; border-radius: 6px; background: #313338; border: 1px solid #1e1f22; }
+  </style>
+  <div data-hf-id="hf-3eqc" id="root" data-composition-id="minutemeeting" data-width="1280" data-height="800">
+    <div data-hf-id="hf-ea4j" id="m-stage">
+      <div data-hf-id="hf-4fgu" class="m-screen">
+        <div data-hf-id="hf-zpp8" class="m-cam" id="m-cam">
+          <div data-hf-id="hf-llfa" class="m-rail">
+            <div data-hf-id="hf-wl00" class="m-srv" style="top: 8px; background: #5865f2"><svg data-hf-id="hf-orzb" width="14" height="11" viewBox="0 0 28 20"><path data-hf-id="hf-v3yr" fill="#fff" d="M23.7 1.7A23 23 0 0 0 18 0l-.7 1.5a21 21 0 0 0-6.6 0L10 0a23 23 0 0 0-5.7 1.7C.7 7.1-.3 12.4.2 17.6A23 23 0 0 0 7.2 21l1.4-2.3a15 15 0 0 1-2.3-1.1l.6-.4a16 16 0 0 0 14.2 0l.6.4c-.7.4-1.5.8-2.3 1.1l1.4 2.3a23 23 0 0 0 7-3.4c.6-6-1-11.3-4.1-15.9ZM9.4 14.4c-1.4 0-2.5-1.3-2.5-2.8s1.1-2.8 2.5-2.8 2.5 1.3 2.5 2.8-1.1 2.8-2.5 2.8Zm9.2 0c-1.4 0-2.5-1.3-2.5-2.8s1.1-2.8 2.5-2.8 2.5 1.3 2.5 2.8-1.1 2.8-2.5 2.8Z" /></svg></div>
+            <div data-hf-id="hf-k6ju" class="m-abs" style="left: 10px; top: 40px; width: 16px; height: 1px; background: #3f4147"></div>
+            <div data-hf-id="hf-8yjx" class="m-abs" style="left: 0; top: 54px; width: 3px; height: 18px; border-radius: 0 2px 2px 0; background: #fff"></div>
+            <div data-hf-id="hf-vit8" class="m-srv" style="top: 50px; border-radius: 8px; background: #5865f2">TO</div>
+            <div data-hf-id="hf-hp89" class="m-srv" style="top: 84px; background: #313338; color: #dbdee1">CpE</div>
+            <div data-hf-id="hf-w58d" class="m-srv" style="top: 118px; background: #313338; color: #23a55a; font-size: 13px; font-weight: 400">+</div>
+          </div>
+          <div data-hf-id="hf-hrz3" class="m-side">
+            <div data-hf-id="hf-n6fj" class="m-abs" style="left: 0; top: 0; width: 120px; height: 26px; border-bottom: 1px solid #1f2023; padding: 8px 10px; font-size: 9px; font-weight: 700; color: #f2f3f5">Team Orbit <span data-hf-id="hf-uxt0" style="float: right; color: #949ba4">⌄</span></div>
+            <div data-hf-id="hf-ztk7" class="m-cat" style="top: 36px">TEXT CHANNELS</div>
+            <div data-hf-id="hf-qduq" class="m-ch" style="top: 46px"><b data-hf-id="hf-yoxe">#</b>general</div>
+            <div data-hf-id="hf-bk43" class="m-ch" style="top: 62px; background: #404249; color: #f2f3f5"><b data-hf-id="hf-xaba">#</b>meeting-room</div>
+            <div data-hf-id="hf-seqq" class="m-ch" style="top: 78px"><b data-hf-id="hf-xomb">#</b>resources</div>
+            <div data-hf-id="hf-h8x4" class="m-cat" style="top: 104px">VOICE CHANNELS</div>
+            <div data-hf-id="hf-1o8g" class="m-ch" style="top: 114px"><b data-hf-id="hf-5x0q" style="font-size: 8px">◖)</b>Lounge</div>
+            <div data-hf-id="hf-g0ke" class="m-abs" style="left: 0; bottom: 0; width: 120px; height: 30px; background: #232428; display: flex; align-items: center; gap: 6px; padding: 0 8px">
+              <div data-hf-id="hf-0izc" class="m-av" style="width: 18px; height: 18px; background: #67e8f9; font-size: 7px">K</div>
+              <div data-hf-id="hf-7tms" style="font-size: 7.5px; font-weight: 600; color: #f2f3f5">karl<div data-hf-id="hf-di6m" style="font-size: 6px; font-weight: 400; color: #949ba4">Online</div></div>
+            </div>
+          </div>
+
+          <div data-hf-id="hf-snk8" class="m-chat">
+            <div data-hf-id="hf-slg4" class="m-abs" style="left: 0; top: 0; width: 484px; height: 26px; border-bottom: 1px solid #26282c; padding: 7px 12px; font-size: 9px; font-weight: 700; color: #f2f3f5">
+              <span data-hf-id="hf-5cth" style="color: #80848e; font-weight: 400">#</span> meeting-room <span data-hf-id="hf-pjkj" style="margin-left: 6px; padding-left: 8px; border-left: 1px solid #3f4147; font-weight: 400; font-size: 7.5px; color: #949ba4">daily stand-up</span>
+            </div>
+            <div data-hf-id="hf-3htq" class="m-list">
+              <div data-hf-id="hf-wy22" class="m-col" id="m-col">
+                <div data-hf-id="hf-h1ki" style="padding: 0 12px 10px">
+                  <div data-hf-id="hf-4fk6" style="width: 34px; height: 34px; border-radius: 50%; background: #41434a; display: grid; place-items: center; font-size: 18px; color: #fff">#</div>
+                  <div data-hf-id="hf-szkc" style="margin-top: 6px; font-size: 13px; font-weight: 700; color: #fff">Welcome to #meeting-room!</div>
+                  <div data-hf-id="hf-u0ha" style="margin-top: 2px; font-size: 7.5px; color: #b5bac1">This is the start of the #meeting-room channel.</div>
+                </div>
+                <div data-hf-id="hf-56jn" class="m-item" id="m-i0" data-at="1.25">
+                  <div data-hf-id="hf-739l" class="m-used">↳ karl used <b data-hf-id="hf-08r7">/meeting start</b></div>
+                  <div data-hf-id="hf-qh4u" class="m-msg" style="padding-top: 0">
+                    <div data-hf-id="hf-ucyu" class="m-av" style="background: #5865f2; color: #fff; font-size: 7px">MM</div>
+                    <div data-hf-id="hf-yeow"><div data-hf-id="hf-t9to" class="m-head" style="color: #c9cdfb">MinuteMeeting <span data-hf-id="hf-uigv" class="m-bot">BOT</span><span data-hf-id="hf-g33z" class="m-time">Today at 9:02 AM</span></div>
+                      <div data-hf-id="hf-yfnl" class="m-embed"><h4 data-hf-id="hf-hb0r">Meeting started</h4><p data-hf-id="hf-mnvt">Recording #meeting-room. Minutes update every 5 minutes.</p></div></div>
+                  </div>
+                </div>
+                <div data-hf-id="hf-t3jl" class="m-item m-msg" id="m-i1" data-at="2.0"><div data-hf-id="hf-1lv8" class="m-av" style="background: #f9a8d4">J</div><div data-hf-id="hf-y7yw"><div data-hf-id="hf-8giy" class="m-head" style="color: #f9a8d4">jai <span data-hf-id="hf-xoei" class="m-time">Today at 9:03 AM</span></div><div data-hf-id="hf-oc5v" class="m-text">Let's ship the dashboard on Friday</div></div></div>
+                <div data-hf-id="hf-10ry" class="m-item m-msg" id="m-i2" data-at="2.55"><div data-hf-id="hf-xvvd" class="m-av" style="background: #fdba74">M</div><div data-hf-id="hf-x11t"><div data-hf-id="hf-3wns" class="m-head" style="color: #fdba74">mika <span data-hf-id="hf-g291" class="m-time">Today at 9:04 AM</span></div><div data-hf-id="hf-52d4" class="m-text">QA needs the build by Thursday night</div></div></div>
+                <div data-hf-id="hf-htvy" class="m-item m-msg" id="m-i3" data-at="3.35"><div data-hf-id="hf-o6fs" class="m-av" style="background: #67e8f9">K</div><div data-hf-id="hf-xfcu"><div data-hf-id="hf-dotp" class="m-head" style="color: #67e8f9">karl <span data-hf-id="hf-9ogo" class="m-time">Today at 9:05 AM</span></div><div data-hf-id="hf-ll7r" class="m-text">I'll take the export bug</div></div></div>
+                <div data-hf-id="hf-xoua" class="m-item m-msg" id="m-i4" data-at="4.15">
+                  <div data-hf-id="hf-avu2" class="m-av" style="background: #5865f2; color: #fff; font-size: 7px">MM</div>
+                  <div data-hf-id="hf-w8fr"><div data-hf-id="hf-5kdw" class="m-head" style="color: #c9cdfb">MinuteMeeting <span data-hf-id="hf-qscf" class="m-bot">BOT</span><span data-hf-id="hf-du12" class="m-time">Today at 9:07 AM</span></div>
+                    <div data-hf-id="hf-7f11" class="m-embed"><h4 data-hf-id="hf-e0xt">Minutes updated</h4>
+                      <h5 data-hf-id="hf-bkod">Decisions</h5><p data-hf-id="hf-vnk8" class="m-line" data-at="4.3">• Ship the dashboard on Friday</p>
+                      <h5 data-hf-id="hf-k2w8">Action items</h5><p data-hf-id="hf-u2r3" class="m-line" data-at="4.45">• Karl: fix the export bug</p><p data-hf-id="hf-abgl" class="m-line" data-at="4.6">• Mika: QA build by Thursday night</p>
+                      <small data-hf-id="hf-f5gw">Summarized by Gemini · refreshes every 5 minutes</small></div></div>
+                </div>
+                <div data-hf-id="hf-bvli" class="m-item" id="m-i5" data-at="6.6">
+                  <div data-hf-id="hf-q3cq" class="m-used">↳ karl used <b data-hf-id="hf-wawn">/meeting export</b> format: PDF</div>
+                  <div data-hf-id="hf-61b6" class="m-msg" style="padding-top: 0">
+                    <div data-hf-id="hf-ba53" class="m-av" style="background: #5865f2; color: #fff; font-size: 7px">MM</div>
+                    <div data-hf-id="hf-wmqs"><div data-hf-id="hf-4dgt" class="m-head" style="color: #c9cdfb">MinuteMeeting <span data-hf-id="hf-qe1e" class="m-bot">BOT</span><span data-hf-id="hf-k4iz" class="m-time">Today at 9:15 AM</span></div>
+                      <div data-hf-id="hf-tpmb" class="m-embed" id="m-final"><h4 data-hf-id="hf-3ex3">Final meeting minutes</h4><p data-hf-id="hf-22w9">1 decision · 2 action items · from 14 messages</p>
+                        <div data-hf-id="hf-wfuo" class="m-file"><svg data-hf-id="hf-22au" width="16" height="20" viewBox="0 0 16 20"><path data-hf-id="hf-w270" d="M2 0h8l6 6v12a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V2a2 2 0 0 1 2-2Z" fill="#ef4444" /><text data-hf-id="hf-heli" x="3" y="15" font-family="Inter" font-size="5" font-weight="700" fill="#fff">PDF</text></svg>
+                          <div data-hf-id="hf-vftp"><div data-hf-id="hf-31d4" style="font-size: 7.5px; color: #00a8fc">meeting-room-minutes.pdf</div><div data-hf-id="hf-akkz" style="font-size: 6px; color: #949ba4">48.2 KB</div></div></div>
+                        <small data-hf-id="hf-56kc">Also available as Markdown or a Word document</small></div></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div data-hf-id="hf-a680" class="m-pop" id="m-pop">
+              <h6 data-hf-id="hf-uzkc">MINUTEMEETING</h6>
+              <div data-hf-id="hf-munk" class="m-row" id="m-r0"><b data-hf-id="hf-2jlf">/meeting start</b><span data-hf-id="hf-yf5g">Start recording a meeting in this channel</span></div>
+              <div data-hf-id="hf-nmbd" class="m-row" id="m-r1"><b data-hf-id="hf-uwrn">/meeting status</b><span data-hf-id="hf-sosm">Show the current meeting state</span></div>
+              <div data-hf-id="hf-ts16" class="m-row" id="m-r2"><b data-hf-id="hf-i6x2">/meeting end</b><span data-hf-id="hf-maf8">Generate final minutes and end this meeting</span></div>
+              <div data-hf-id="hf-xq57" class="m-row" id="m-r3"><b data-hf-id="hf-m3w7">/meeting export</b><span data-hf-id="hf-pe59">Export the current meeting minutes</span></div>
+            </div>
+            <div data-hf-id="hf-4pwo" class="m-pop" id="m-fmt">
+              <h6 data-hf-id="hf-29b0">FORMAT</h6>
+              <div data-hf-id="hf-tinz" class="m-row" id="m-o0"><b data-hf-id="hf-q05o">Markdown</b></div>
+              <div data-hf-id="hf-pkjy" class="m-row" id="m-o1"><b data-hf-id="hf-60le">Word document</b></div>
+              <div data-hf-id="hf-lmfx" class="m-row" id="m-o2"><b data-hf-id="hf-5u1h">PDF</b></div>
+            </div>
+            <div data-hf-id="hf-s2dy" class="m-input">
+              <span data-hf-id="hf-93db" style="display: grid; place-items: center; width: 14px; height: 14px; border-radius: 50%; background: #b5bac1; color: #383a40; font-size: 10px; font-weight: 700">+</span>
+              <span data-hf-id="hf-k0t7" id="m-typed" style="color: #dbdee1"></span><span data-hf-id="hf-gmq1" id="m-caret" style="display: inline-block; width: 1px; height: 10px; margin-left: -7px; background: #dbdee1"></span>
+              <span data-hf-id="hf-yxuy" id="m-ph" style="color: #6d6f78">Message #meeting-room</span>
+            </div>
+            <div data-hf-id="hf-xr0x" class="m-abs" id="m-typing" style="left: 14px; bottom: 2px; font-size: 6px; color: #b5bac1"><b data-hf-id="hf-iwl8" style="color: #dbdee1">MinuteMeeting</b> is typing…</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script>
+    ;(() => {
+      const { seg, ease, keys, typed, caret, camera } = kit
+      const $ = (id) => document.getElementById(id)
+      const items = [...document.querySelectorAll("#m-col .m-item")]
+      const lines = [...document.querySelectorAll("#m-col .m-line")]
+      // What karl types, and when it is sent
+      const INPUT = [
+        { text: "/meeting start", from: 0.25, cps: 18, sent: 1.15 },
+        { text: "I'll take the export bug", from: 2.75, cps: 48, sent: 3.3 },
+        { text: "/meeting export", from: 5.15, cps: 30, sent: 6.45 },
+      ]
+      const CAM = [
+        { t: 0, z: 1, x: 320, y: 200 },
+        { t: 6.9, z: 1, x: 320, y: 200 },
+        { t: 7.6, z: 1.45, x: 330, y: 300 },
+        { t: 8.6, z: 1.45, x: 330, y: 300 },
+        { t: 9.25, z: 1, x: 320, y: 200 },
+      ]
+
+      const tl = kit.run(10, (t) => {
+        // Messages arrive at their times and fade away at the end, so the loop starts on the empty channel
+        const keep = 1 - ease.in(seg(t, 9.3, 9.85))
+        for (const el of items) {
+          const at = +el.dataset.at
+          el.style.display = t >= at && t < 9.9 ? "" : "none"
+          const a = ease.out(seg(t, at, at + 0.25))
+          el.style.opacity = String(a * keep)
+          el.style.transform = `translateY(${(1 - a) * 6}px)`
+        }
+        for (const el of lines) el.style.opacity = String(ease.out(seg(t, +el.dataset.at, +el.dataset.at + 0.2)))
+
+        // The input: typing, sending, and the command pickers above it
+        const cur = INPUT.find((k) => t >= k.from && t < k.sent) ?? null
+        const text = cur ? typed(cur.text, t, cur.from, cur.cps) : ""
+        $("m-typed").textContent = text
+        $("m-ph").style.display = text ? "none" : ""
+        $("m-caret").style.opacity = String(cur ? caret(t, text.length < cur.text.length) : 0)
+        const cmd = cur && cur.text.startsWith("/") && text.length > 0 && t < (cur.text.endsWith("export") ? 5.8 : cur.sent)
+        $("m-pop").style.opacity = String(cmd ? 1 : 0)
+        const pick = text.endsWith("export") || text.includes("ex") ? 3 : text.includes(" s") || text.endsWith("start") ? 0 : -1
+        for (let i = 0; i < 4; i++) $(`m-r${i}`).style.background = i === pick ? "#404249" : "transparent"
+        const fmt = t >= 5.8 && t < 6.45
+        $("m-fmt").style.opacity = String(fmt ? 1 : 0)
+        const opt = t < 6.05 ? 0 : t < 6.2 ? 1 : 2
+        for (let i = 0; i < 3; i++) $(`m-o${i}`).style.background = fmt && i === opt ? "#404249" : "transparent"
+        $("m-typing").style.opacity = String(t > 3.7 && t < 4.15 ? 1 : 0)
+
+        const k = keys(CAM, t)
+        $("m-cam").style.transform = camera(k.z, k.x, k.y, 640, 400)
+      })
+      window.__timelines = window.__timelines || {}
+      window.__timelines["minutemeeting"] = tl
+    })()
+  </script>
+</template>

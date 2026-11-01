@@ -1,0 +1,223 @@
+<!--
+  Pantawid Pasada demo (10 s loop; its screen is 1280x728, the inside of the site's window frame, centred at top 36).
+  Recreated from the app's WinForms designers: Form1 (LOGIN), adminPanel (ADMIN PANEL: Home, Monitor Fuel Prices,
+  Manage Accounts, Log Out), dashboardPetron ("Maligayang Araw,") and fuelPrice ("Fuel Price Monitor", "DOE Official
+  Prices", the brand table, the LiveCharts "change in prices" chart and the LTFRB note), in Segoe UI as the forms set.
+  Laid out at 640x364 and drawn at 2x; coordinates are design pixels.
+-->
+<template>
+  <style>
+    @font-face { font-family: "Segoe UI Local"; src: local("Segoe UI"); font-weight: 400; }
+    @font-face { font-family: "Segoe UI Local"; src: local("Segoe UI Semibold"); font-weight: 600; }
+    @font-face { font-family: "Segoe UI Local"; src: local("Segoe UI Bold"); font-weight: 700; }
+    #root { position: absolute; inset: 0; background: #030409; }
+    #w-stage { position: absolute; left: 0; top: 36px; width: 1280px; height: 728px; overflow: hidden; background: #eef2f7; }
+    .w-screen { position: absolute; left: 0; top: 0; width: 640px; height: 364px; zoom: 2; overflow: hidden;
+      font-family: "Segoe UI Local", Inter, sans-serif; color: #0f172a; }
+    .w-cam { position: absolute; left: 0; top: 0; width: 640px; height: 364px; transform-origin: 0 0; }
+    .w-abs { position: absolute; }
+    .w-page { position: absolute; inset: 0; }
+    .w-box { position: absolute; height: 24px; background: #fff; border: 1px solid #cbd5e1; padding: 5px 8px; font-size: 9px; }
+    .w-nav { position: absolute; left: 8px; width: 134px; height: 24px; padding: 5px 10px; font-size: 8.5px; font-weight: 700; color: rgb(255 255 255 / 0.82); }
+    .w-sec { position: absolute; left: 16px; font-size: 7px; font-weight: 700; letter-spacing: 0.06em; color: rgb(255 255 255 / 0.45); }
+    .w-tile { position: absolute; top: 54px; width: 108px; height: 46px; background: #fff; border-left: 4px solid; padding: 6px 9px; box-shadow: 0 1px 2px rgb(15 23 42 / 0.08); }
+    .w-tile small { display: block; font-size: 7px; color: #64748b; }
+    .w-tile b { display: block; margin-top: 1px; font-size: 16px; font-weight: 700; }
+    .w-grid { position: absolute; background: #fff; box-shadow: 0 1px 2px rgb(15 23 42 / 0.08); }
+    .w-th { position: absolute; left: 0; right: 0; top: 0; height: 18px; background: #1e3a8a; color: #fff; font-size: 6.5px; font-weight: 700; letter-spacing: 0.04em; }
+    .w-th span, .w-tr span { position: absolute; top: 0; line-height: 18px; white-space: nowrap; }
+    .w-tr { position: absolute; left: 0; right: 0; height: 26px; border-bottom: 1px solid #eef2f7; font-size: 7.5px; }
+    .w-tr span { line-height: 26px; }
+    .w-badge { display: inline-block; padding: 0 6px; line-height: 13px !important; border-radius: 3px; font-size: 6.5px; font-weight: 700; margin-top: 6.5px; }
+    .w-btn { display: inline-block; padding: 0 6px; line-height: 13px; border-radius: 2px; font-size: 6.5px; font-weight: 700; color: #fff; margin-top: 6.5px; }
+    #w-cursor { position: absolute; left: 0; top: 0; width: 14px; height: 20px; transform-origin: 1px 1px; filter: drop-shadow(0 1px 1.5px rgb(0 0 0 / 0.35)); }
+    #w-ring { position: absolute; left: -14px; top: -14px; width: 28px; height: 28px; border-radius: 50%; border: 2px solid #1e40af; }
+  </style>
+  <div data-hf-id="hf-z9ut" id="root" data-composition-id="pantawid" data-width="1280" data-height="800">
+    <div data-hf-id="hf-a10p" id="w-stage">
+      <div data-hf-id="hf-gop0" class="w-screen">
+        <div data-hf-id="hf-k2oo" class="w-cam" id="w-cam">
+          <!-- The app, after login -->
+          <div data-hf-id="hf-7qlq" class="w-page" id="w-app" style="background: #eef2f7">
+            <div data-hf-id="hf-si84" class="w-abs" style="left: 0; top: 0; width: 150px; height: 364px; background: #0f1e4a">
+              <div data-hf-id="hf-xabr" class="w-abs" style="left: 16px; top: 16px; font-size: 14px; font-weight: 700; color: #fff; line-height: 1.05">ADMIN<br data-hf-id="hf-x5px" /><span data-hf-id="hf-g5vi" style="color: #fbbf24">PANEL</span></div>
+              <div data-hf-id="hf-udl9" class="w-abs" style="left: 16px; top: 52px; width: 124px; font-size: 6.5px; line-height: 1.4; color: rgb(255 255 255 / 0.55)">Fuel Subsidy and Fare Management System</div>
+              <div data-hf-id="hf-tnav" class="w-sec" style="top: 86px">MAIN</div>
+              <div data-hf-id="hf-huvx" class="w-abs" id="w-on" style="left: 8px; top: 98px; width: 134px; height: 24px; background: rgb(255 255 255 / 0.12); border-left: 3px solid #fbbf24"></div>
+              <div data-hf-id="hf-joz4" class="w-nav" style="top: 98px">Home</div>
+              <div data-hf-id="hf-45a9" class="w-nav" style="top: 124px">Monitor Fuel Prices</div>
+              <div data-hf-id="hf-7es4" class="w-sec" style="top: 162px">ACCOUNT</div>
+              <div data-hf-id="hf-ts7h" class="w-nav" style="top: 174px">Manage Accounts</div>
+              <div data-hf-id="hf-lqcq" class="w-nav" style="top: 200px; color: #fca5a5">Log Out</div>
+            </div>
+
+            <!-- Home: the review queue -->
+            <div data-hf-id="hf-t997" class="w-page" id="w-home" style="left: 150px">
+              <div data-hf-id="hf-xiud" class="w-abs" style="left: 16px; top: 14px; font-size: 14px; font-weight: 700">Maligayang Araw, Admin!</div>
+              <div data-hf-id="hf-650h" class="w-abs" style="left: 16px; top: 34px; font-size: 7.5px; color: #64748b">Tuesday, November 3, 2026 · 31 applications waiting for review</div>
+              <div data-hf-id="hf-qb1x" class="w-tile" style="left: 16px; border-color: #2563eb"><small data-hf-id="hf-rb23">Applications</small><b data-hf-id="hf-0n9q" id="w-t0">0</b></div>
+              <div data-hf-id="hf-jtal" class="w-tile" style="left: 132px; border-color: #16a34a"><small data-hf-id="hf-ib6r">Approved</small><b data-hf-id="hf-74pd" id="w-t1">0</b></div>
+              <div data-hf-id="hf-hukg" class="w-tile" style="left: 248px; border-color: #d97706"><small data-hf-id="hf-zh8u">Under review</small><b data-hf-id="hf-qrmo" id="w-t2">0</b></div>
+              <div data-hf-id="hf-bydp" class="w-tile" style="left: 364px; border-color: #64748b"><small data-hf-id="hf-bqdq">On hold</small><b data-hf-id="hf-89sb" id="w-t3">0</b></div>
+              <div data-hf-id="hf-i6rd" class="w-grid" style="left: 16px; top: 112px; width: 456px; height: 236px">
+                <div data-hf-id="hf-w8ko" class="w-abs" style="left: 10px; top: -1px"></div>
+                <div data-hf-id="hf-kpr0" class="w-th"><span data-hf-id="hf-hv44" style="left: 10px">DRIVER</span><span data-hf-id="hf-os92" style="left: 104px">VEHICLE</span><span data-hf-id="hf-vkau" style="left: 194px">ROUTE</span><span data-hf-id="hf-a6pq" style="left: 300px">STATUS</span><span data-hf-id="hf-ye4u" style="left: 380px">ACTION</span></div>
+                <div data-hf-id="hf-lg2m" class="w-tr" style="top: 18px"><span data-hf-id="hf-norg" style="left: 10px">R. Dela Cruz</span><span data-hf-id="hf-diaw" style="left: 104px">PUJ · ABC 1234</span><span data-hf-id="hf-meqt" style="left: 194px">Talamban – Carbon</span><span data-hf-id="hf-1qtw" style="left: 300px"><i data-hf-id="hf-n6dp" class="w-badge" style="background: #dcfce7; color: #15803d">Approved</i></span><span data-hf-id="hf-bx0e" style="left: 380px; color: #94a3b8">—</span></div>
+                <div data-hf-id="hf-6k47" class="w-tr" id="w-row" style="top: 44px"><span data-hf-id="hf-33yn" style="left: 10px; font-weight: 700">M. Santos</span><span data-hf-id="hf-pals" style="left: 104px">PUJ · DEF 8821</span><span data-hf-id="hf-a5br" style="left: 194px">Mabolo – Colon</span><span data-hf-id="hf-3ub0" style="left: 300px"><i data-hf-id="hf-86kp" class="w-badge" id="w-st" style="background: #fef3c7; color: #b45309">Under review</i></span><span data-hf-id="hf-2wyk" style="left: 380px"><i data-hf-id="hf-b6n1" class="w-btn" id="w-approve" style="background: #16a34a">Approve</i> <i data-hf-id="hf-xnh1" class="w-btn" style="background: #64748b">Hold</i></span></div>
+                <div data-hf-id="hf-5iws" class="w-tr" style="top: 70px"><span data-hf-id="hf-74sm" style="left: 10px">J. Reyes</span><span data-hf-id="hf-63tv" style="left: 104px">PUJ · GHI 4410</span><span data-hf-id="hf-yjnp" style="left: 194px">Lahug – Ayala</span><span data-hf-id="hf-2ndx" style="left: 300px"><i data-hf-id="hf-36u1" class="w-badge" style="background: #e2e8f0; color: #475569">On hold</i></span><span data-hf-id="hf-vkno" style="left: 380px"><i data-hf-id="hf-f1um" class="w-btn" style="background: #2563eb">Review</i></span></div>
+                <div data-hf-id="hf-1fls" class="w-tr" style="top: 96px"><span data-hf-id="hf-gk7e" style="left: 10px">A. Villanueva</span><span data-hf-id="hf-r4kf" style="left: 104px">PUJ · JKL 7720</span><span data-hf-id="hf-k1w4" style="left: 194px">Mandaue – SM City</span><span data-hf-id="hf-31oy" style="left: 300px"><i data-hf-id="hf-bk3u" class="w-badge" style="background: #fef3c7; color: #b45309">Under review</i></span><span data-hf-id="hf-udql" style="left: 380px"><i data-hf-id="hf-1e86" class="w-btn" style="background: #16a34a">Approve</i> <i data-hf-id="hf-cwg9" class="w-btn" style="background: #64748b">Hold</i></span></div>
+                <div data-hf-id="hf-yabq" class="w-tr" style="top: 122px"><span data-hf-id="hf-mz2f" style="left: 10px">L. Bautista</span><span data-hf-id="hf-wad9" style="left: 104px">PUJ · MNO 3305</span><span data-hf-id="hf-46u1" style="left: 194px">Guadalupe – Colon</span><span data-hf-id="hf-5183" style="left: 300px"><i data-hf-id="hf-t3r5" class="w-badge" style="background: #dcfce7; color: #15803d">Approved</i></span><span data-hf-id="hf-0tky" style="left: 380px; color: #94a3b8">—</span></div>
+                <div data-hf-id="hf-8k7y" class="w-tr" style="top: 148px"><span data-hf-id="hf-7cf1" style="left: 10px">C. Ramos</span><span data-hf-id="hf-feve" style="left: 104px">PUJ · PQR 6612</span><span data-hf-id="hf-ig7i" style="left: 194px">Talisay – Colon</span><span data-hf-id="hf-5fj4" style="left: 300px"><i data-hf-id="hf-g9xq" class="w-badge" style="background: #fef3c7; color: #b45309">Under review</i></span><span data-hf-id="hf-us1m" style="left: 380px"><i data-hf-id="hf-3ioa" class="w-btn" style="background: #16a34a">Approve</i> <i data-hf-id="hf-e3dc" class="w-btn" style="background: #64748b">Hold</i></span></div>
+              </div>
+              <!-- MessageBox after approving -->
+              <div data-hf-id="hf-4j5t" class="w-abs" id="w-msg" style="left: 128px; top: 132px; width: 232px; height: 94px; background: #fff; border: 1px solid #94a3b8; box-shadow: 0 10px 30px rgb(15 23 42 / 0.3)">
+                <div data-hf-id="hf-jvl2" class="w-abs" style="left: 0; top: 0; right: 0; height: 18px; padding: 3px 8px; font-size: 7.5px; border-bottom: 1px solid #e2e8f0">Pantawid Pasada <span data-hf-id="hf-crxh" style="float: right">✕</span></div>
+                <div data-hf-id="hf-jye9" class="w-abs" style="left: 12px; top: 30px; width: 20px; height: 20px; border-radius: 50%; background: #2563eb; color: #fff; font-size: 11px; font-weight: 700; text-align: center; line-height: 20px">i</div>
+                <div data-hf-id="hf-s94h" class="w-abs" style="left: 42px; top: 28px; width: 180px; font-size: 7.5px; line-height: 1.45">Application approved. M. Santos has been notified by email.</div>
+                <div data-hf-id="hf-q8m6" class="w-abs" id="w-ok" style="left: 172px; top: 66px; width: 48px; height: 18px; border: 1px solid #2563eb; background: #e5efff; font-size: 7.5px; text-align: center; line-height: 16px">OK</div>
+              </div>
+            </div>
+
+            <!-- Fuel Price Monitor -->
+            <div data-hf-id="hf-4qju" class="w-page" id="w-fuel" style="left: 150px">
+              <div data-hf-id="hf-99zn" class="w-abs" style="left: 16px; top: 14px; font-size: 14px; font-weight: 700">Fuel Price Monitor</div>
+              <div data-hf-id="hf-lcns" class="w-abs" style="left: 16px; top: 34px; font-size: 8px; font-weight: 700; color: #1e40af">DOE Official Prices <span data-hf-id="hf-4wdd" style="font-weight: 400; color: #64748b">· as of November 3, 2026</span></div>
+              <div data-hf-id="hf-k30g" class="w-grid" style="left: 16px; top: 54px; width: 456px; height: 122px">
+                <div data-hf-id="hf-b710" class="w-th"><span data-hf-id="hf-7e1g" style="left: 10px">BRAND/STATION</span><span data-hf-id="hf-308h" style="left: 120px">AREA</span><span data-hf-id="hf-of9p" style="left: 220px">DIESEL</span><span data-hf-id="hf-ul04" style="left: 300px">PREM UNLEADED</span><span data-hf-id="hf-hblj" style="left: 390px">UNLEADED</span></div>
+                <div data-hf-id="hf-209q" class="w-tr w-fr" style="top: 18px"><span data-hf-id="hf-crwu" style="left: 10px; font-weight: 700"><i data-hf-id="hf-hf9q" style="display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #1d4ed8; margin-right: 5px"></i>Petron</span><span data-hf-id="hf-p2qw" style="left: 120px">Cebu City</span><span data-hf-id="hf-y9l3" style="left: 220px">₱58.40</span><span data-hf-id="hf-myrs" style="left: 300px">₱67.15</span><span data-hf-id="hf-aa5b" style="left: 390px">₱62.30</span></div>
+                <div data-hf-id="hf-03cx" class="w-tr w-fr" style="top: 44px"><span data-hf-id="hf-yetk" style="left: 10px; font-weight: 700"><i data-hf-id="hf-sl2p" style="display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #eab308; margin-right: 5px"></i>Shell</span><span data-hf-id="hf-39r4" style="left: 120px">Cebu City</span><span data-hf-id="hf-vm3d" style="left: 220px">₱58.95</span><span data-hf-id="hf-2rt0" style="left: 300px">₱68.10</span><span data-hf-id="hf-u8s3" style="left: 390px">₱62.85</span></div>
+                <div data-hf-id="hf-uybg" class="w-tr w-fr" style="top: 70px"><span data-hf-id="hf-ya47" style="left: 10px; font-weight: 700"><i data-hf-id="hf-j3cp" style="display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #dc2626; margin-right: 5px"></i>Caltex</span><span data-hf-id="hf-jeql" style="left: 120px">Mandaue</span><span data-hf-id="hf-att8" style="left: 220px">₱58.70</span><span data-hf-id="hf-0o7c" style="left: 300px">₱67.60</span><span data-hf-id="hf-aon6" style="left: 390px">₱62.55</span></div>
+                <div data-hf-id="hf-gl13" class="w-tr w-fr" style="top: 96px; border: 0"><span data-hf-id="hf-2uj7" style="left: 10px; font-weight: 700"><i data-hf-id="hf-2dye" style="display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #0891b2; margin-right: 5px"></i>Seaoil</span><span data-hf-id="hf-wan3" style="left: 120px">Lapu-Lapu</span><span data-hf-id="hf-n7gp" style="left: 220px">₱57.90</span><span data-hf-id="hf-bhvr" style="left: 300px">₱66.40</span><span data-hf-id="hf-8wzf" style="left: 390px">₱61.75</span></div>
+              </div>
+              <div data-hf-id="hf-z5t3" class="w-grid" style="left: 16px; top: 184px; width: 456px; height: 152px">
+                <div data-hf-id="hf-d6cg" class="w-abs" style="left: 10px; top: 8px; font-size: 8.5px; font-weight: 700">Change in prices <span data-hf-id="hf-9xbp" style="font-weight: 400; color: #64748b; font-size: 7px">· ₱ per litre, last 6 weeks</span></div>
+                <div data-hf-id="hf-l1gd" class="w-abs" style="right: 10px; top: 9px; font-size: 6.5px; color: #475569"><b data-hf-id="hf-l95i" style="color: #2563eb">●</b> Diesel &nbsp;<b data-hf-id="hf-6wfp" style="color: #ea580c">●</b> Premium &nbsp;<b data-hf-id="hf-qdn3" style="color: #16a34a">●</b> Unleaded</div>
+                <svg data-hf-id="hf-qqqp" class="w-abs" style="left: 10px; top: 26px" width="436" height="120" viewBox="0 0 436 120">
+                  <g data-hf-id="hf-d8oy" stroke="#eef2f7"><line data-hf-id="hf-ti66" x1="30" x2="430" y1="10" y2="10" /><line data-hf-id="hf-7o8i" x1="30" x2="430" y1="45" y2="45" /><line data-hf-id="hf-n9iq" x1="30" x2="430" y1="80" y2="80" /><line data-hf-id="hf-b8tg" x1="30" x2="430" y1="104" y2="104" /></g>
+                  <g data-hf-id="hf-dljh" font-family="Segoe UI Local, Inter" font-size="6.5" fill="#94a3b8"><text data-hf-id="hf-hzvb" x="4" y="12">68</text><text data-hf-id="hf-zu0c" x="4" y="47">63</text><text data-hf-id="hf-ux8v" x="4" y="82">58</text>
+                    <text data-hf-id="hf-lsg0" x="34" y="116">Sep 29</text><text data-hf-id="hf-rg1y" x="110" y="116">Oct 6</text><text data-hf-id="hf-hmih" x="186" y="116">Oct 13</text><text data-hf-id="hf-0fsm" x="262" y="116">Oct 20</text><text data-hf-id="hf-s1fj" x="338" y="116">Oct 27</text><text data-hf-id="hf-j6is" x="402" y="116">Nov 3</text></g>
+                  <path data-hf-id="hf-pkvc" class="w-line" d="M44 99 L120 93 L196 86 L272 82 L348 79 L420 77" stroke="#2563eb" />
+                  <path data-hf-id="hf-78f6" class="w-line" d="M44 38 L120 32 L196 25 L272 20 L348 18 L420 16" stroke="#ea580c" />
+                  <path data-hf-id="hf-7eix" class="w-line" d="M44 73 L120 67 L196 61 L272 57 L348 54 L420 52" stroke="#16a34a" />
+                </svg>
+              </div>
+              <div data-hf-id="hf-q7og" class="w-abs" style="left: 16px; top: 344px; font-size: 6.5px; color: #64748b">For concerns or price discrepancies, please contact your nearest LTFRB office.</div>
+            </div>
+          </div>
+
+          <!-- Form1: LOGIN -->
+          <div data-hf-id="hf-44v3" class="w-page" id="w-login" style="background: #f8fafc">
+            <div data-hf-id="hf-lhgq" class="w-abs" style="left: 0; top: 0; width: 250px; height: 364px; background: linear-gradient(160deg, #1e3a8a, #172554)">
+              <div data-hf-id="hf-v9zs" class="w-abs" style="left: 24px; top: 112px; font-size: 20px; font-weight: 700; color: #fff">Pantawid Pasada</div>
+              <div data-hf-id="hf-frj7" class="w-abs" style="left: 24px; top: 142px; width: 200px; font-size: 9px; line-height: 1.4; color: rgb(255 255 255 / 0.8)">Fuel Subsidy and Fare Management System</div>
+              <svg data-hf-id="hf-ali9" class="w-abs" style="left: 30px; top: 196px" width="180" height="78" viewBox="0 0 180 78">
+                <rect data-hf-id="hf-t18q" x="14" y="8" width="128" height="10" rx="3" fill="#fbbf24" />
+                <rect data-hf-id="hf-1mrk" x="8" y="16" width="150" height="38" rx="6" fill="#f8fafc" />
+                <rect data-hf-id="hf-mz00" x="8" y="16" width="150" height="8" rx="4" fill="#dc2626" />
+                <g data-hf-id="hf-ywa4" fill="#93c5fd"><rect data-hf-id="hf-4gaz" x="18" y="28" width="20" height="14" rx="2" /><rect data-hf-id="hf-an5g" x="42" y="28" width="20" height="14" rx="2" /><rect data-hf-id="hf-69xy" x="66" y="28" width="20" height="14" rx="2" /><rect data-hf-id="hf-954b" x="90" y="28" width="20" height="14" rx="2" /></g>
+                <rect data-hf-id="hf-fnha" x="118" y="28" width="30" height="22" rx="2" fill="#1e3a8a" />
+                <rect data-hf-id="hf-em5j" x="4" y="50" width="160" height="6" rx="3" fill="#cbd5e1" />
+                <circle data-hf-id="hf-cmb1" cx="38" cy="58" r="10" fill="#0f172a" /><circle data-hf-id="hf-sw7e" cx="38" cy="58" r="4" fill="#94a3b8" />
+                <circle data-hf-id="hf-yq3i" cx="132" cy="58" r="10" fill="#0f172a" /><circle data-hf-id="hf-eaer" cx="132" cy="58" r="4" fill="#94a3b8" />
+              </svg>
+            </div>
+            <div data-hf-id="hf-0upc" class="w-abs" style="left: 330px; top: 78px; font-size: 18px; font-weight: 700; color: #1e3a8a">LOGIN</div>
+            <div data-hf-id="hf-kw3k" class="w-abs" style="left: 330px; top: 110px; font-size: 8px; color: #475569">Username</div>
+            <div data-hf-id="hf-kygw" class="w-box" id="w-user" style="left: 330px; top: 122px; width: 230px"><span data-hf-id="hf-e9h7" id="w-u"></span><span data-hf-id="hf-htni" id="w-uc" style="display: inline-block; width: 1px; height: 10px; background: #0f172a; vertical-align: -1px"></span></div>
+            <div data-hf-id="hf-hxf7" class="w-abs" style="left: 330px; top: 156px; font-size: 8px; color: #475569">Password</div>
+            <div data-hf-id="hf-l8r3" class="w-box" id="w-pass" style="left: 330px; top: 168px; width: 230px; letter-spacing: 2px"><span data-hf-id="hf-vhri" id="w-p"></span></div>
+            <div data-hf-id="hf-0ixh" class="w-abs" id="w-login-btn" style="left: 330px; top: 208px; width: 230px; height: 26px; background: #1e40af; color: #fff; font-size: 9px; font-weight: 700; text-align: center; line-height: 26px">Login</div>
+            <div data-hf-id="hf-i3zj" class="w-abs" style="left: 362px; top: 246px; font-size: 8px; color: #475569">Dont have an account? <span data-hf-id="hf-4i3u" style="color: #2563eb; font-weight: 600">Sign Up</span></div>
+          </div>
+
+          <div data-hf-id="hf-vjwr" id="w-ring"></div>
+          <svg data-hf-id="hf-4cg6" id="w-cursor" viewBox="0 0 14 20"><path data-hf-id="hf-vz16" d="M1 1v15.5l4-3.6 2.6 5.8 2.6-1.1-2.6-5.7h5.2Z" fill="#fff" stroke="#0f172a" stroke-width="1.2" stroke-linejoin="round" /></svg>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script>
+    ;(() => {
+      const { seg, ease, keys, typed, caret, press, ring, camera } = kit
+      const $ = (id) => document.getElementById(id)
+      const fuelRows = [...document.querySelectorAll(".w-fr")]
+      const lines = [...document.querySelectorAll(".w-line")]
+      lines.forEach((l) => { l.setAttribute("fill", "none"); l.setAttribute("stroke-width", "2"); l.setAttribute("stroke-linejoin", "round"); l.setAttribute("pathLength", "1"); l.setAttribute("stroke-dasharray", "1 1") })
+      const APPROVE = { x: 150 + 16 + 380 + 16, y: 112 + 44 + 13 }
+      const OK = { x: 150 + 128 + 172 + 24, y: 132 + 66 + 9 }
+      const PATH = [
+        { t: 0, x: 560, y: 330 },
+        { t: 0.6, x: 380, y: 135 },
+        { t: 1.35, x: 380, y: 135 },
+        { t: 1.5, x: 384, y: 181 },
+        { t: 1.8, x: 384, y: 181 },
+        { t: 1.95, x: 446, y: 222 },
+        { t: 2.4, x: 446, y: 222 },
+        { t: 3.7, x: APPROVE.x, y: APPROVE.y },
+        { t: 4.4, x: APPROVE.x, y: APPROVE.y },
+        { t: 4.8, x: OK.x, y: OK.y },
+        { t: 5.0, x: OK.x, y: OK.y },
+        { t: 5.35, x: 72, y: 137 },
+        { t: 5.6, x: 72, y: 137 },
+        { t: 6.6, x: 470, y: 268 },
+        { t: 9.2, x: 470, y: 268 },
+        { t: 10, x: 560, y: 330 },
+      ]
+      const CLICKS = [0.65, 1.55, 2.05, 3.85, 4.9, 5.45]
+      const CAM = [
+        { t: 0, z: 1, x: 320, y: 182 },
+        { t: 7.4, z: 1, x: 320, y: 182 },
+        { t: 8.0, z: 1.35, x: 400, y: 262 },
+        { t: 8.7, z: 1.35, x: 400, y: 262 },
+        { t: 9.25, z: 1, x: 320, y: 182 },
+      ]
+
+      const tl = kit.run(10, (t) => {
+        const loginOn = Math.max(1 - ease.out(seg(t, 2.1, 2.45)), ease.inOut(seg(t, 9.3, 9.85)))
+        $("w-login").style.opacity = String(loginOn)
+        const u = typed("gov.reviewer", t, 0.75, 22)
+        $("w-u").textContent = u
+        $("w-uc").style.opacity = String(t > 0.65 && t < 1.5 ? caret(t, u.length < 12) : 0)
+        $("w-user").style.borderColor = t > 0.65 && t < 1.5 ? "#2563eb" : "#cbd5e1"
+        $("w-p").textContent = "•".repeat(Math.max(0, Math.min(10, Math.floor((t - 1.6) * 30))))
+        $("w-pass").style.borderColor = t > 1.55 && t < 2.05 ? "#2563eb" : "#cbd5e1"
+        $("w-login-btn").style.background = press(t, 2.05) > 0 ? "#1e3a8a" : "#1e40af"
+
+        // Home → (approve one) → Fuel Price Monitor
+        const toFuel = ease.inOut(seg(t, 5.45, 5.75))
+        $("w-home").style.opacity = String(1 - toFuel)
+        $("w-fuel").style.opacity = String(toFuel)
+        $("w-on").style.top = `${98 + 26 * ease.inOut(seg(t, 5.42, 5.62))}px`
+        const c = ease.out(seg(t, 2.4, 3.2))
+        const approved = t >= 3.9
+        $("w-t0").textContent = String(Math.round(128 * c))
+        $("w-t1").textContent = String(Math.round(86 * c) + (approved ? 1 : 0))
+        $("w-t2").textContent = String(Math.round(31 * c) - (approved ? 1 : 0))
+        $("w-t3").textContent = String(Math.round(11 * c))
+        $("w-st").textContent = approved ? "Approved" : "Under review"
+        $("w-st").style.background = approved ? "#dcfce7" : "#fef3c7"
+        $("w-st").style.color = approved ? "#15803d" : "#b45309"
+        $("w-row").style.background = `rgb(220 252 231 / ${0.8 * Math.sin(Math.PI * seg(t, 3.9, 4.6))})`
+        $("w-approve").style.filter = press(t, 3.85) > 0 ? "brightness(0.85)" : "none"
+        const msg = Math.min(ease.out(seg(t, 4.0, 4.15)), 1 - ease.in(seg(t, 4.92, 5.02)))
+        $("w-msg").style.opacity = String(msg)
+        $("w-msg").style.transform = `scale(${0.96 + 0.04 * msg})`
+        $("w-ok").style.background = press(t, 4.9) > 0 ? "#bfd7ff" : "#e5efff"
+
+        fuelRows.forEach((r, i) => (r.style.opacity = String(ease.out(seg(t, 5.7 + i * 0.12, 6.0 + i * 0.12)))))
+        lines.forEach((l, i) => (l.style.strokeDashoffset = String(1 - ease.inOut(seg(t, 6.1 + i * 0.15, 7.3 + i * 0.15)))))
+
+        const p = keys(PATH, t)
+        const pr = Math.max(...CLICKS.map((a) => press(t, a)))
+        $("w-cursor").style.transform = `translate(${p.x}px, ${p.y}px) scale(${1 - 0.18 * pr})`
+        const r = CLICKS.map((a) => ring(t, a)).find((x) => x.o > 0) ?? { s: 0, o: 0 }
+        $("w-ring").style.transform = `translate(${p.x}px, ${p.y}px) scale(${r.s})`
+        $("w-ring").style.opacity = String(r.o)
+        const k = keys(CAM, t)
+        $("w-cam").style.transform = camera(k.z, k.x, k.y, 640, 364)
+      })
+      window.__timelines = window.__timelines || {}
+      window.__timelines["pantawid"] = tl
+    })()
+  </script>
+</template>

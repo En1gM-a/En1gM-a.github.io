@@ -11,7 +11,7 @@
 ## Projects
 
 - [Sugbo Now](https://github.com/En1gM-a/SugboNow): Cebu daily intelligence platform with live conditions and an AI daily brief (React, TypeScript, Node.js, Supabase)
-- [Kuryentipid](https://kuryentipid.vercel.app): electricity-savings tracker with a bill optimizer and provider rate map (React, Supabase)
+- [Kuryentipid](https://github.com/En1gM-a/Kuryentipid): electricity-savings tracker with a bill optimizer and provider rate map (React, Supabase); its backend is paused
 - [Planado](https://github.com/En1gM-a/Planado): group planning mobile app with shared calendars and an Android widget (React Native, Expo, Kotlin)
 - [MinuteMeeting](https://github.com/En1gM-a/MinuteMeeting): Discord bot that writes AI meeting minutes, with an Electron desktop app (Python, Gemini)
 - [Pantawid Pasada](https://github.com/En1gM-a/PantawidPasada): role-based fuel subsidy management system (C#, .NET, MySQL)

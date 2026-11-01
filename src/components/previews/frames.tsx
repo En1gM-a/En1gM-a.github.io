@@ -1,22 +1,4 @@
-import { useEffect, useState, type ReactNode } from "react"
-import { useReducedMotion } from "motion/react"
-
-/**
- * Steps 0..count-1 on an interval while `play` is true; used to sequence preview animations.
- * Returns -1 when it isn't looping (out of view, or reduced motion) so previews show their complete state.
- */
-export function useLoop(count: number, every: number, play: boolean) {
-  const reduce = useReducedMotion()
-  const live = play && !reduce
-  const [step, setStep] = useState(0)
-  useEffect(() => {
-    if (!live) return
-    setStep(0)
-    const id = window.setInterval(() => setStep((s) => (s + 1) % count), every)
-    return () => window.clearInterval(id)
-  }, [count, every, live])
-  return live ? step : -1
-}
+import type { ReactNode } from "react"
 
 export function BrowserFrame({ url, children }: { url: string; children: ReactNode }) {
   return (

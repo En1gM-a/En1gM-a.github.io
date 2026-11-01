@@ -1,0 +1,296 @@
+<!--
+  Kuryentipid demo (10 s loop, 1280x696: the screen inside the site's browser frame).
+  Opens on the app's real sign-in screen (assets/kuryentipid.webp); the rest is recreated from the app's code
+  (src/pages/Dashboard.jsx, BillOptimizer.jsx, components/Sidebar.jsx): its labels, Tailwind colours and layout.
+  Ends on the state it is in today: its Supabase backend is paused.
+  Laid out at 640x348 and drawn at 2x (zoom), so every coordinate below is in those design pixels.
+-->
+<template>
+  <style>
+                  #root { position: absolute; inset: 0; background: #030409; }
+      #k-stage { position: absolute; left: 0; top: 52px; width: 1280px; height: 696px; overflow: hidden; background: #f3f4f6; }
+      .k-screen { position: absolute; left: 0; top: 0; width: 640px; height: 348px; zoom: 2; overflow: hidden;
+        font-family: Inter, sans-serif; color: #111827; }
+      .k-cam { position: absolute; left: 0; top: 0; width: 640px; height: 348px; transform-origin: 0 0; }
+      .k-abs { position: absolute; }
+
+      #k-login { position: absolute; inset: 0; }
+      #k-login img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+      #k-app { position: absolute; inset: 0; background: #f3f4f6; }
+      .k-side { position: absolute; left: 0; top: 0; width: 124px; height: 348px; background: #fff; border-right: 1px solid #f3f4f6; }
+      .k-logo { position: absolute; left: 12px; top: 12px; display: flex; align-items: center; gap: 6px; font-weight: 700; font-size: 11px; }
+      .k-logo i { display: grid; place-items: center; width: 18px; height: 18px; border-radius: 5px; background: #2563eb; }
+      .k-nav { position: absolute; left: 8px; width: 108px; height: 22px; border-radius: 6px; display: flex; align-items: center; gap: 7px;
+        padding: 0 8px; font-size: 8.5px; font-weight: 500; color: #6b7280; }
+      .k-nav svg, .k-ico svg { width: 11px; height: 11px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+      .k-nav-on { position: absolute; left: 8px; width: 108px; height: 22px; border-radius: 6px; background: #eff6ff; }
+      .k-acct { position: absolute; left: 16px; top: 288px; font-size: 6.5px; font-weight: 600; letter-spacing: 0.08em; color: #9ca3af; }
+      .k-out { top: 300px; color: #ef4444; }
+
+      .k-view { position: absolute; left: 124px; top: 0; width: 516px; height: 348px; }
+      .k-h1 { position: absolute; left: 14px; top: 13px; font-size: 14px; font-weight: 700; letter-spacing: -0.01em; }
+      .k-sub { position: absolute; left: 14px; top: 32px; font-size: 7.5px; color: #6b7280; }
+      .k-btn { position: absolute; top: 14px; height: 18px; padding: 0 9px; border-radius: 6px; font-size: 7.5px; font-weight: 600;
+        display: flex; align-items: center; gap: 4px; }
+      .k-card { position: absolute; background: #fff; border: 1px solid #f3f4f6; border-radius: 9px; box-shadow: 0 1px 2px rgb(0 0 0 / 0.04); }
+      .k-stat .k-ico { position: absolute; left: 9px; top: 9px; width: 20px; height: 20px; border-radius: 6px; display: grid; place-items: center; }
+      .k-stat .k-tag { position: absolute; right: 8px; top: 9px; font-size: 5.5px; font-weight: 700; letter-spacing: 0.06em; padding: 2px 4px; border-radius: 4px; }
+      .k-stat .k-label { position: absolute; left: 9px; top: 33px; font-size: 6.5px; color: #6b7280; }
+      .k-stat .k-val { position: absolute; left: 9px; top: 41px; font-size: 12px; font-weight: 700; letter-spacing: -0.01em; }
+      .k-title { position: absolute; left: 11px; top: 9px; font-size: 8.5px; font-weight: 700; }
+      .k-hint { position: absolute; right: 11px; top: 10px; font-size: 6.5px; color: #9ca3af; }
+      .k-row { position: absolute; left: 11px; right: 11px; font-size: 7px; }
+      .k-row b { font-weight: 600; }
+      .k-bar { position: absolute; left: 0; right: 0; top: 11px; height: 5px; border-radius: 3px; background: #f3f4f6; overflow: hidden; }
+      .k-bar i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 3px; }
+
+      .k-slider { position: absolute; left: 14px; width: 220px; height: 4px; border-radius: 2px; background: #e5e7eb; }
+      .k-slider i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 2px; background: #2563eb; }
+      .k-thumb { position: absolute; top: -4px; width: 12px; height: 12px; margin-left: -6px; border-radius: 50%; background: #fff;
+        border: 2px solid #2563eb; box-shadow: 0 1px 3px rgb(37 99 235 / 0.35); }
+      .k-scale { position: absolute; left: 14px; width: 220px; display: flex; justify-content: space-between; font-size: 5.5px; color: #9ca3af; }
+
+      #k-veil { position: absolute; inset: 0; background: rgb(243 244 246 / 0.72); }
+      #k-banner { position: absolute; left: 150px; top: 12px; width: 340px; padding: 9px 12px; border-radius: 10px; background: #fff;
+        border: 1px solid #fde68a; box-shadow: 0 10px 30px rgb(17 24 39 / 0.16); display: flex; gap: 9px; }
+      #k-banner .dot { flex: none; margin-top: 2px; width: 16px; height: 16px; border-radius: 50%; background: #fef3c7; display: grid; place-items: center; }
+      #k-banner .dot i { width: 6px; height: 6px; border-radius: 50%; background: #f59e0b; }
+      #k-banner b { display: block; font-size: 9px; font-weight: 700; }
+      #k-banner span { display: block; margin-top: 2px; font-size: 7px; line-height: 1.45; color: #6b7280; }
+
+      #k-cursor { position: absolute; left: 0; top: 0; width: 14px; height: 20px; transform-origin: 1px 1px; filter: drop-shadow(0 1px 1.5px rgb(0 0 0 / 0.35)); }
+      #k-ring { position: absolute; left: -14px; top: -14px; width: 28px; height: 28px; border-radius: 50%; border: 2px solid #2563eb; }
+      </style>
+  <div data-hf-id="hf-0kdt" id="root" data-composition-id="kuryentipid" data-width="1280" data-height="800">
+      <div data-hf-id="hf-4lwl" id="k-stage">
+        <div data-hf-id="hf-oquo" class="k-screen">
+          <div data-hf-id="hf-pmq0" class="k-cam" id="k-cam">
+            <!-- The app, recreated -->
+            <div data-hf-id="hf-hucy" id="k-app">
+              <div data-hf-id="hf-5gf1" class="k-side">
+                <div data-hf-id="hf-lvsp" class="k-logo"><i data-hf-id="hf-wt6k"><svg data-hf-id="hf-z7no" width="10" height="10" viewBox="0 0 24 24"><path data-hf-id="hf-m32k" d="M13 2 3 14h9l-1 8 10-12h-9l1-8z" fill="#fff" /></svg></i>Kuryentipid</div>
+                <div data-hf-id="hf-yrb9" class="k-nav-on" id="k-on" style="top: 48px"></div>
+                <div data-hf-id="hf-eytk" class="k-nav" id="k-n0" style="top: 48px"><svg data-hf-id="hf-ulu9" viewBox="0 0 24 24"><rect data-hf-id="hf-jbys" x="3" y="3" width="7" height="7" rx="1" /><rect data-hf-id="hf-4pxk" x="14" y="3" width="7" height="7" rx="1" /><rect data-hf-id="hf-uzwe" x="3" y="14" width="7" height="7" rx="1" /><rect data-hf-id="hf-0oia" x="14" y="14" width="7" height="7" rx="1" /></svg>Dashboard</div>
+                <div data-hf-id="hf-p9r9" class="k-nav" style="top: 74px"><svg data-hf-id="hf-1tol" viewBox="0 0 24 24"><path data-hf-id="hf-fdra" d="M12 22v-5M9 8V2M15 8V2M18 8v5a4 4 0 0 1-4 4h-4a4 4 0 0 1-4-4V8Z" /></svg>Appliances</div>
+                <div data-hf-id="hf-qiid" class="k-nav" id="k-n2" style="top: 100px"><svg data-hf-id="hf-30lo" viewBox="0 0 24 24"><path data-hf-id="hf-wjh1" d="M21 4h-7M10 4H3M21 12h-9M8 12H3M21 20h-5M12 20H3M14 2v4M8 10v4M16 18v4" /></svg>Bill Optimizer</div>
+                <div data-hf-id="hf-ldji" class="k-nav" style="top: 126px"><svg data-hf-id="hf-2man" viewBox="0 0 24 24"><path data-hf-id="hf-iapp" d="M3 3v18h18M18 17V9M13 17V5M8 17v-3" /></svg>Monthly History</div>
+                <div data-hf-id="hf-i3jl" class="k-nav" style="top: 152px"><svg data-hf-id="hf-3t7q" viewBox="0 0 24 24"><path data-hf-id="hf-6wfp" d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" /><circle data-hf-id="hf-ybtk" cx="12" cy="7" r="4" /></svg>Profile</div>
+                <div data-hf-id="hf-1hvs" class="k-acct">ACCOUNT</div>
+                <div data-hf-id="hf-uwrn" class="k-nav k-out"><svg data-hf-id="hf-3ewp" viewBox="0 0 24 24"><path data-hf-id="hf-gfyz" d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" /></svg>Log Out</div>
+              </div>
+
+              <!-- Dashboard.jsx -->
+              <div data-hf-id="hf-xb55" class="k-view" id="k-dash">
+                <div data-hf-id="hf-1mhq" class="k-h1">Dashboard Overview</div>
+                <div data-hf-id="hf-6yaf" class="k-sub">Here's how your home is using electricity this month.</div>
+                <div data-hf-id="hf-u03i" class="k-btn" style="left: 330px; background: #2563eb; color: #fff">+ Add Appliance</div>
+                <div data-hf-id="hf-ydzu" class="k-btn" style="left: 420px; background: #fff; color: #374151; border: 1px solid #e5e7eb">Optimize Bill</div>
+
+                <div data-hf-id="hf-r6t5" class="k-card k-stat" style="left: 14px; top: 50px; width: 116px; height: 56px">
+                  <div data-hf-id="hf-vep5" class="k-ico" style="background: #eff6ff; color: #3b82f6"><svg data-hf-id="hf-4lts" viewBox="0 0 24 24"><path data-hf-id="hf-v6dm" d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8" /></svg></div>
+                  <div data-hf-id="hf-7fuq" class="k-tag" style="background: #eff6ff; color: #2563eb">ESTIMATED</div>
+                  <div data-hf-id="hf-1bv2" class="k-label">Estimated Monthly Bill</div>
+                  <div data-hf-id="hf-2ncc" class="k-val" id="k-v0">₱0</div>
+                </div>
+                <div data-hf-id="hf-bh5m" class="k-card k-stat" style="left: 138px; top: 50px; width: 116px; height: 56px">
+                  <div data-hf-id="hf-c15l" class="k-ico" style="background: #faf5ff; color: #a855f7"><svg data-hf-id="hf-47ir" viewBox="0 0 24 24"><path data-hf-id="hf-jet5" d="M13 2 3 14h9l-1 8 10-12h-9l1-8z" /></svg></div>
+                  <div data-hf-id="hf-q09v" class="k-label">Total Monthly kWh</div>
+                  <div data-hf-id="hf-zxxu" class="k-val" id="k-v1">0 kWh</div>
+                </div>
+                <div data-hf-id="hf-9pow" class="k-card k-stat" style="left: 262px; top: 50px; width: 116px; height: 56px">
+                  <div data-hf-id="hf-pkkr" class="k-ico" style="background: #fff7ed; color: #f97316"><svg data-hf-id="hf-z1je" viewBox="0 0 24 24"><path data-hf-id="hf-gr8q" d="M12 22v-5M9 8V2M15 8V2M18 8v5a4 4 0 0 1-4 4h-4a4 4 0 0 1-4-4V8Z" /></svg></div>
+                  <div data-hf-id="hf-yfy0" class="k-label">Number of Appliances</div>
+                  <div data-hf-id="hf-1rjh" class="k-val" id="k-v2">0</div>
+                </div>
+                <div data-hf-id="hf-4z0t" class="k-card k-stat" style="left: 386px; top: 50px; width: 116px; height: 56px">
+                  <div data-hf-id="hf-tczd" class="k-ico" style="background: #f0fdf4; color: #22c55e"><svg data-hf-id="hf-yn8d" viewBox="0 0 24 24"><path data-hf-id="hf-5ati" d="M22 17l-8.5-8.5-5 5L2 7M16 17h6v-6" /></svg></div>
+                  <div data-hf-id="hf-w6au" class="k-tag" style="background: #f0fdf4; color: #16a34a">POTENTIAL</div>
+                  <div data-hf-id="hf-fb87" class="k-label">Potential Savings</div>
+                  <div data-hf-id="hf-36st" class="k-val" id="k-v3" style="color: #16a34a">₱0</div>
+                </div>
+
+                <div data-hf-id="hf-57a0" class="k-card" style="left: 14px; top: 114px; width: 296px; height: 220px">
+                  <div data-hf-id="hf-16fy" class="k-title">Energy Usage Trend</div>
+                  <div data-hf-id="hf-87sn" class="k-hint">kWh · last 6 months</div>
+                  <svg data-hf-id="hf-81ij" class="k-abs" style="left: 8px; top: 30px" width="280" height="182" viewBox="0 0 280 182">
+                    <g data-hf-id="hf-9yfl" stroke="#f3f4f6" stroke-width="1">
+                      <line data-hf-id="hf-kkon" x1="22" x2="274" y1="20" y2="20" /><line data-hf-id="hf-k8b3" x1="22" x2="274" y1="60" y2="60" /><line data-hf-id="hf-ae3p" x1="22" x2="274" y1="100" y2="100" /><line data-hf-id="hf-i0sl" x1="22" x2="274" y1="140" y2="140" />
+                    </g>
+                    <g data-hf-id="hf-7aib" font-family="Inter" font-size="6.5" fill="#9ca3af">
+                      <text data-hf-id="hf-pgjs" x="0" y="22">260</text><text data-hf-id="hf-q4wu" x="0" y="62">240</text><text data-hf-id="hf-liy5" x="0" y="102">220</text><text data-hf-id="hf-1b8b" x="0" y="142">200</text>
+                      <text data-hf-id="hf-t5ha" x="24" y="160">Jun</text><text data-hf-id="hf-s8d3" x="72" y="160">Jul</text><text data-hf-id="hf-mjej" x="120" y="160">Aug</text><text data-hf-id="hf-18f0" x="168" y="160">Sep</text><text data-hf-id="hf-wmmy" x="216" y="160">Oct</text><text data-hf-id="hf-iizl" x="258" y="160">Nov</text>
+                    </g>
+                    <defs data-hf-id="hf-mh0t"><linearGradient data-hf-id="hf-z9sd" id="k-fill" x1="0" x2="0" y1="0" y2="1"><stop data-hf-id="hf-aiog" offset="0" stop-color="#3b82f6" stop-opacity="0.22" /><stop data-hf-id="hf-rv2v" offset="1" stop-color="#3b82f6" stop-opacity="0" /></linearGradient></defs>
+                    <path data-hf-id="hf-78ac" id="k-area" d="M30 64 L78 38 L126 48 L174 82 L222 98 L270 112 L270 150 L30 150 Z" fill="url(#k-fill)" />
+                    <path data-hf-id="hf-j8ug" id="k-line" d="M30 64 L78 38 L126 48 L174 82 L222 98 L270 112" fill="none" stroke="#2563eb" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round" pathLength="1" stroke-dasharray="1 1" />
+                    <g data-hf-id="hf-nxv4" fill="#fff" stroke="#2563eb" stroke-width="1.6">
+                      <circle data-hf-id="hf-8jwi" class="k-pt" cx="30" cy="64" r="2.6" /><circle data-hf-id="hf-d2ul" class="k-pt" cx="78" cy="38" r="2.6" /><circle data-hf-id="hf-xdhi" class="k-pt" cx="126" cy="48" r="2.6" />
+                      <circle data-hf-id="hf-1bax" class="k-pt" cx="174" cy="82" r="2.6" /><circle data-hf-id="hf-7lna" class="k-pt" cx="222" cy="98" r="2.6" /><circle data-hf-id="hf-gxs6" class="k-pt" cx="270" cy="112" r="2.6" />
+                    </g>
+                  </svg>
+                </div>
+                <div data-hf-id="hf-pqbl" class="k-card" style="left: 318px; top: 114px; width: 184px; height: 220px">
+                  <div data-hf-id="hf-h1wm" class="k-title">Top Energy Consumers</div>
+                  <div data-hf-id="hf-pepi" class="k-row" style="top: 34px"><b data-hf-id="hf-zyxx">Aircon</b> <span data-hf-id="hf-ajx7" style="float: right; color: #6b7280">46%</span><div data-hf-id="hf-yp83" class="k-bar"><i data-hf-id="hf-m4ei" class="k-b" style="background: #3b82f6"></i></div></div>
+                  <div data-hf-id="hf-ojqj" class="k-row" style="top: 62px"><b data-hf-id="hf-bmff">Refrigerator</b> <span data-hf-id="hf-c2f6" style="float: right; color: #6b7280">21%</span><div data-hf-id="hf-68wj" class="k-bar"><i data-hf-id="hf-pc4n" class="k-b" style="background: #a855f7"></i></div></div>
+                  <div data-hf-id="hf-wk04" class="k-row" style="top: 90px"><b data-hf-id="hf-zbo5">Water heater</b> <span data-hf-id="hf-q564" style="float: right; color: #6b7280">12%</span><div data-hf-id="hf-5uli" class="k-bar"><i data-hf-id="hf-g3cr" class="k-b" style="background: #f97316"></i></div></div>
+                  <div data-hf-id="hf-s5mf" class="k-row" style="top: 118px"><b data-hf-id="hf-0wup">Television</b> <span data-hf-id="hf-vkr5" style="float: right; color: #6b7280">8%</span><div data-hf-id="hf-5gah" class="k-bar"><i data-hf-id="hf-orpd" class="k-b" style="background: #22c55e"></i></div></div>
+                  <div data-hf-id="hf-x8q8" class="k-row" style="top: 150px; color: #2563eb; font-weight: 600">Manage All Appliances →</div>
+                </div>
+              </div>
+
+              <!-- BillOptimizer.jsx -->
+              <div data-hf-id="hf-swm4" class="k-view" id="k-opt">
+                <div data-hf-id="hf-db0r" class="k-h1">Bill Optimizer</div>
+                <div data-hf-id="hf-ijjg" class="k-sub">Simulate changes to your appliance usage and see real-time impact on your bill.</div>
+                <div data-hf-id="hf-pw0m" class="k-card" style="left: 14px; top: 50px; width: 248px; height: 284px">
+                  <div data-hf-id="hf-rnh7" class="k-title">Adjust Daily Usage</div>
+                  <div data-hf-id="hf-fbco" class="k-hint" style="color: #2563eb; font-weight: 600">Reset to Default</div>
+                  <div data-hf-id="hf-vm6y" class="k-row" style="top: 34px"><b data-hf-id="hf-nw1l">Aircon</b> <span data-hf-id="hf-6vrh" style="color: #9ca3af">· 1.5 HP inverter</span><span data-hf-id="hf-j1jo" id="k-hrs" style="float: right; font-weight: 600; color: #2563eb">8 hrs/day</span></div>
+                  <div data-hf-id="hf-2qkp" class="k-slider" style="top: 52px"><i data-hf-id="hf-xpzy" id="k-fill0"></i><div data-hf-id="hf-7ft6" class="k-thumb" id="k-thumb"></div></div>
+                  <div data-hf-id="hf-t91t" class="k-scale" style="top: 62px"><span data-hf-id="hf-hfsh">0h</span><span data-hf-id="hf-lj2i">12h</span><span data-hf-id="hf-2ivx">24h</span></div>
+                  <div data-hf-id="hf-7azu" class="k-row" style="top: 96px"><b data-hf-id="hf-u757">Refrigerator</b><span data-hf-id="hf-efhp" style="float: right; font-weight: 600; color: #374151">24 hrs/day</span></div>
+                  <div data-hf-id="hf-oz6m" class="k-slider" style="top: 114px"><i data-hf-id="hf-bnif" style="width: 100%"></i><div data-hf-id="hf-xdzv" class="k-thumb" style="left: 220px"></div></div>
+                  <div data-hf-id="hf-9x9v" class="k-row" style="top: 150px"><b data-hf-id="hf-qev9">Television</b><span data-hf-id="hf-qw3j" style="float: right; font-weight: 600; color: #374151">6 hrs/day</span></div>
+                  <div data-hf-id="hf-zk8j" class="k-slider" style="top: 168px"><i data-hf-id="hf-zek3" style="width: 25%"></i><div data-hf-id="hf-gd3j" class="k-thumb" style="left: 55px"></div></div>
+                  <div data-hf-id="hf-nrhv" class="k-row" style="top: 204px"><b data-hf-id="hf-m6wv">Washing machine</b><span data-hf-id="hf-ozue" style="float: right; font-weight: 600; color: #374151">1 hrs/day</span></div>
+                  <div data-hf-id="hf-ck2a" class="k-slider" style="top: 222px"><i data-hf-id="hf-n91c" style="width: 4.2%"></i><div data-hf-id="hf-xdwq" class="k-thumb" style="left: 9px"></div></div>
+                </div>
+                <div data-hf-id="hf-tgch" class="k-card" style="left: 270px; top: 50px; width: 232px; height: 284px">
+                  <div data-hf-id="hf-ix3w" class="k-title" style="font-size: 6.5px; letter-spacing: 0.08em; color: #6b7280">OPTIMIZATION RESULTS</div>
+                  <div data-hf-id="hf-smd8" class="k-abs" style="left: 11px; top: 28px; font-size: 7px; color: #6b7280">Current Bill</div>
+                  <div data-hf-id="hf-qfdr" class="k-abs" style="left: 11px; top: 38px; font-size: 13px; font-weight: 700">₱2,846</div>
+                  <div data-hf-id="hf-i6hi" class="k-abs" style="left: 120px; top: 28px; font-size: 7px; color: #6b7280">Projected Bill</div>
+                  <div data-hf-id="hf-uky3" class="k-abs" id="k-proj" style="left: 120px; top: 38px; font-size: 13px; font-weight: 700; color: #2563eb">₱2,846</div>
+                  <div data-hf-id="hf-zfk8" class="k-abs" style="left: 11px; top: 64px; width: 210px; height: 64px; border-radius: 8px; background: #f0fdf4; border: 1px solid #bbf7d0">
+                    <div data-hf-id="hf-7vl1" class="k-abs" style="left: 10px; top: 9px; font-size: 6px; font-weight: 700; letter-spacing: 0.08em; color: #16a34a">ESTIMATED MONTHLY SAVINGS</div>
+                    <div data-hf-id="hf-apbz" class="k-abs" style="left: 10px; top: 22px; font-size: 22px; font-weight: 800; letter-spacing: -0.02em; color: #15803d"><span data-hf-id="hf-gv58" id="k-save">₱0</span><span data-hf-id="hf-j5ak" style="font-size: 9px; font-weight: 600"> / mo</span></div>
+                  </div>
+                  <div data-hf-id="hf-w4ta" class="k-abs" style="left: 11px; top: 140px; font-size: 8px; font-weight: 700">Bill Impact Breakdown</div>
+                  <div data-hf-id="hf-xnjp" class="k-abs" style="left: 11px; top: 152px; font-size: 6.5px; color: #9ca3af">Based on current kWh rates and simulated usage patterns.</div>
+                  <div data-hf-id="hf-i1h3" class="k-abs" style="left: 11px; top: 172px; font-size: 6.5px; color: #6b7280">Current</div>
+                  <div data-hf-id="hf-7r43" class="k-abs" style="left: 60px; top: 173px; width: 160px; height: 7px; border-radius: 4px; background: #d1d5db"></div>
+                  <div data-hf-id="hf-h6i2" class="k-abs" style="left: 11px; top: 190px; font-size: 6.5px; color: #6b7280">Projected</div>
+                  <div data-hf-id="hf-dcog" class="k-abs" id="k-projbar" style="left: 60px; top: 191px; width: 160px; height: 7px; border-radius: 4px; background: #2563eb"></div>
+                  <div data-hf-id="hf-w47m" class="k-abs" style="left: 11px; top: 216px; width: 210px; padding: 8px; border-radius: 8px; background: #eff6ff; font-size: 6.5px; line-height: 1.5; color: #1e40af">
+                    <b data-hf-id="hf-n9uf" style="display: block; font-size: 7px">Smart AI Recommendations</b>Run the aircon on its timer to 5 hrs a night and set it to 25°C.
+                  </div>
+                </div>
+              </div>
+              <div data-hf-id="hf-x5cp" id="k-veil"></div>
+            </div>
+
+            <!-- The app's real sign-in screen -->
+            <div data-hf-id="hf-cnwo" id="k-login"><img data-hf-id="hf-004m" src="assets/kuryentipid.webp" alt="" /></div>
+
+            <div data-hf-id="hf-qirk" id="k-tip" class="k-abs" style="left: 224px; top: 160px; padding: 3px 6px; border-radius: 5px; background: #111827; color: #fff; font-size: 7px; font-weight: 600; white-space: nowrap">Jul · 251 kWh</div>
+
+            <div data-hf-id="hf-fnf3" id="k-banner">
+              <div data-hf-id="hf-lu65" class="dot"><i data-hf-id="hf-zeb8"></i></div>
+              <div data-hf-id="hf-yeow"><b data-hf-id="hf-1xab">Backend paused</b><span data-hf-id="hf-xfsh">Kuryentipid's Supabase project is no longer running, so sign-in and data are offline. This demo is recreated from the app's code.</span></div>
+            </div>
+
+            <div data-hf-id="hf-8hiv" id="k-ring"></div>
+            <svg data-hf-id="hf-1vs2" id="k-cursor" viewBox="0 0 14 20"><path data-hf-id="hf-ummh" d="M1 1v15.5l4-3.6 2.6 5.8 2.6-1.1-2.6-5.7h5.2Z" fill="#111827" stroke="#fff" stroke-width="1.2" stroke-linejoin="round" /></svg>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script>
+    ;(() => {
+      const { seg, mix, ease, tween, keys, press, ring, peso, camera } = kit
+      const $ = (id) => document.getElementById(id)
+      const cam = $("k-cam"), login = $("k-login"), dash = $("k-dash"), opt = $("k-opt")
+      const cursor = $("k-cursor"), ringEl = $("k-ring"), on = $("k-on"), banner = $("k-banner"), veil = $("k-veil")
+      const pts = [...document.querySelectorAll(".k-pt")], bars = [...document.querySelectorAll(".k-b")]
+      const BARS = [46, 21, 12, 8]
+      const H0 = 8, H1 = 5, X0 = 14, W = 220 // the aircon slider: hours, its track's left edge and width
+
+      // Where the cursor is when: Sign In, the chart, Bill Optimizer, the aircon slider (dragged 8h → 5h), the results
+      const PATH = [
+        { t: 0, x: 600, y: 316 },
+        { t: 1.05, x: 480, y: 262 },
+        { t: 1.6, x: 480, y: 262 },
+        { t: 2.55, x: 226, y: 186 },
+        { t: 3.05, x: 226, y: 186 },
+        { t: 3.5, x: 62, y: 111 },
+        { t: 3.95, x: 62, y: 111 },
+        { t: 4.6, x: 124 + X0 + (H0 / 24) * W + 14, y: 50 + 52 + 2 },
+        { t: 4.85, x: 124 + X0 + (H0 / 24) * W + 14, y: 50 + 52 + 2 },
+        { t: 5.85, x: 124 + X0 + (H1 / 24) * W + 14, y: 50 + 52 + 2 },
+        { t: 6.1, x: 124 + X0 + (H1 / 24) * W + 14, y: 50 + 52 + 2 },
+        { t: 6.9, x: 470, y: 150 },
+        { t: 9.2, x: 470, y: 150 },
+        { t: 10, x: 600, y: 316 },
+      ]
+      const CLICKS = [1.2, 3.75, 4.8]
+      const CAM = [
+        { t: 0, z: 1, x: 320, y: 174 },
+        { t: 6.1, z: 1, x: 320, y: 174 },
+        { t: 6.9, z: 1.45, x: 510, y: 165 },
+        { t: 7.7, z: 1.45, x: 510, y: 165 },
+        { t: 8.3, z: 1, x: 320, y: 174 },
+      ]
+
+      const tl = kit.run(10, (t) => {
+        // Sign in → the dashboard → Bill Optimizer → offline → back to sign in
+        const app = 1 - (seg(t, 1.35, 1.75) < 1 ? 1 - ease.out(seg(t, 1.35, 1.75)) : 0)
+        login.style.opacity = String(Math.max(1 - ease.out(seg(t, 1.35, 1.75)), ease.inOut(seg(t, 9.35, 9.9))))
+        const toOpt = ease.inOut(seg(t, 3.85, 4.15))
+        dash.style.opacity = String(1 - toOpt)
+        opt.style.opacity = String(toOpt)
+        on.style.top = `${mix(48, 100, ease.inOut(seg(t, 3.8, 4.05)))}px`
+        $("k-n0").style.color = toOpt < 0.5 ? "#2563eb" : "#6b7280"
+        $("k-n2").style.color = toOpt >= 0.5 ? "#2563eb" : "#6b7280"
+        $("k-n0").style.fontWeight = toOpt < 0.5 ? "600" : "500"
+        $("k-n2").style.fontWeight = toOpt >= 0.5 ? "600" : "500"
+
+        // The dashboard fills in: counters, the trend line, the consumer bars
+        const c = ease.out(seg(t, 1.8, 2.9))
+        $("k-v0").textContent = peso(2846 * c)
+        $("k-v1").textContent = `${Math.round(214 * c)} kWh`
+        $("k-v2").textContent = String(Math.round(8 * c))
+        $("k-v3").textContent = peso(412 * c)
+        const draw = ease.inOut(seg(t, 1.9, 3.1))
+        $("k-line").style.strokeDashoffset = String(1 - draw)
+        $("k-area").style.opacity = String(ease.out(seg(t, 2.6, 3.3)))
+        // Each point shows as the line reaches it; hovering July shows its reading
+        pts.forEach((p, i) => (p.style.opacity = String(kit.clamp((draw - i / 5) * 12))))
+        const tip = kit.window(t, 2.6, 3.35, 0.15)
+        $("k-tip").style.opacity = String(tip)
+        $("k-tip").style.transform = `translate(-50%, ${(1 - tip) * 4}px)`
+        bars.forEach((b, i) => (b.style.width = `${BARS[i] * 2 * ease.out(seg(t, 2.1 + i * 0.12, 2.9 + i * 0.12))}%`))
+
+        // The aircon slider dragged from 8 to 5 hours a day; the projected bill follows it
+        const drag = ease.inOut(seg(t, 4.85, 5.85))
+        const hrs = mix(H0, H1, drag)
+        $("k-thumb").style.left = `${(hrs / 24) * W}px`
+        $("k-fill0").style.width = `${(hrs / 24) * 100}%`
+        $("k-hrs").textContent = `${Math.round(hrs)} hrs/day`
+        $("k-proj").textContent = peso(2846 - 445 * drag)
+        $("k-save").textContent = peso(445 * drag)
+        $("k-projbar").style.width = `${160 * (1 - 0.156 * drag)}px`
+
+        // Offline: the app greys out under a notice
+        const off = Math.min(ease.out(seg(t, 7.9, 8.4)), 1 - ease.in(seg(t, 9.35, 9.9)))
+        veil.style.opacity = String(off)
+        banner.style.opacity = String(off)
+        banner.style.transform = `translateY(${(1 - off) * -16}px)`
+
+        // Cursor, clicks and the camera
+        const p = keys(PATH, t)
+        const pr = Math.max(...CLICKS.map((a) => press(t, a)), t > 4.85 && t < 5.85 ? 0.6 : 0)
+        cursor.style.transform = `translate(${p.x}px, ${p.y}px) scale(${1 - 0.18 * pr})`
+        const r = CLICKS.map((a) => ring(t, a)).find((x) => x.o > 0) ?? { s: 0, o: 0 }
+        ringEl.style.transform = `translate(${p.x}px, ${p.y}px) scale(${r.s})`
+        ringEl.style.opacity = String(r.o)
+        const k = keys(CAM, t)
+        cam.style.transform = camera(k.z, k.x, k.y, 640, 348)
+      })
+      window.__timelines = window.__timelines || {}
+      window.__timelines["kuryentipid"] = tl
+    })()
+  </script>
+</template>

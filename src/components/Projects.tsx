@@ -58,6 +58,12 @@ function StatusBadge({ status }: { status: Project["status"] }) {
         <span className="size-1.5 rounded-full bg-signal" /> Live
       </span>
     )
+  if (status === "offline")
+    return (
+      <span className="label flex items-center gap-2 rounded-full border border-line bg-white/5 px-2.5 py-1 text-dim">
+        <span className="size-1.5 rounded-full bg-faint" /> Backend paused
+      </span>
+    )
   if (status === "wip")
     return (
       <span className="label flex items-center gap-2 rounded-full border border-amber-300/40 bg-amber-300/10 px-2.5 py-1 text-amber-200">
@@ -94,9 +100,10 @@ function Fit({ children }: { children: ReactNode }) {
   )
 }
 
-function Preview({ project }: { project: Project }) {
+/** `live`: whether this is the stop the voyage is at; its stops are stacked, so being in view isn't enough */
+function Preview({ project, live = true }: { project: Project; live?: boolean }) {
   const ref = useRef<HTMLDivElement>(null)
-  const play = useInView(ref, { amount: 0.35 })
+  const play = useInView(ref, { amount: 0.35 }) && live
   const { bind, rotate, glare } = useTilt(8)
   return (
     <div ref={ref} className="@container [perspective:1200px]" {...bind}>
@@ -109,7 +116,7 @@ function Preview({ project }: { project: Project }) {
           className="label absolute -bottom-3 left-4 rounded-full border border-line bg-void/90 px-3 py-1.5 text-[10px] whitespace-nowrap @max-[15rem]:-bottom-2 @max-[15rem]:left-2 @max-[15rem]:px-2 @max-[15rem]:py-1 @max-[15rem]:text-[8px]"
           style={{ transform: "translateZ(50px)" }}
         >
-          {project.preview === "kuryentipid" ? "Live screenshot" : "Recreated preview"}
+          Recreated preview
         </span>
       </motion.div>
     </div>
@@ -177,7 +184,7 @@ function Links({ project, className = "" }: { project: Project; className?: stri
 }
 
 /** Phone version: what fits under the planet on a tall screen (tighter on short ones, so the preview still fits) */
-function CompactDetails({ project }: { project: Project }) {
+function CompactDetails({ project, live }: { project: Project; live: boolean }) {
   return (
     <div className="flex flex-col">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -190,7 +197,7 @@ function CompactDetails({ project }: { project: Project }) {
       <p className="mt-3 line-clamp-4 text-[15px] leading-relaxed text-dim short:mt-2 short:line-clamp-2 short:text-[14px]">{project.summary}</p>
       {/* On short screens the preview takes the height left under the planet; with too little, it steps aside */}
       <div className="mt-5 w-[86%] max-w-sm short:mt-3 short:w-[min(86%,calc((100svh_-_446px)_*_1.6))] [@media(max-height:535px)]:hidden">
-        <Preview project={project} />
+        <Preview project={project} live={live} />
       </div>
       <Links project={project} className="mt-6 short:mt-4" />
     </div>
@@ -229,6 +236,9 @@ function Destination({
     return `blur(${(blur * 14).toFixed(2)}px)`
   })
   const pointerEvents = useTransform(d, (v) => (Math.abs(v) < 0.25 ? "auto" : "none"))
+  // Only the stop on screen (and the next while travelling to it) plays its demo, so one clip loads at a time
+  const [near, setNear] = useState(() => Math.abs(d.get()) < 0.6)
+  useMotionValueEvent(d, "change", (v) => setNear(Math.abs(v) < 0.6))
 
   if (!wide)
     return (
@@ -241,7 +251,7 @@ function Destination({
         <p id={`planet-${index}`} className="label mb-2 text-cyan">
           Planet {project.planet.name}
         </p>
-        <CompactDetails project={project} />
+        <CompactDetails project={project} live={near} />
       </motion.article>
     )
 
@@ -260,7 +270,7 @@ function Destination({
         <Details project={project} />
       </div>
       <div className={`row-start-1 col-span-5 ${planetRight ? "col-start-5" : "col-start-4"}`}>
-        <Preview project={project} />
+        <Preview project={project} live={near} />
       </div>
     </motion.article>
   )
@@ -466,15 +476,24 @@ export function Projects() {
   useEffect(() => {
     if (!voyage) bootDone("voyage")
   }, [voyage])
-  const live = projects.filter((p) => p.status === "live").length
-  const wip = projects.filter((p) => p.status === "wip").length
+  // Only the states some project is in: "6 projects, 1 in development and 1 offline."
+  const states = (
+    [
+      ["live", "live"],
+      ["wip", "in development"],
+      ["offline", "offline"],
+    ] as const
+  )
+    .map(([status, word]) => [projects.filter((p) => p.status === status).length, word] as const)
+    .filter(([n]) => n > 0)
+    .map(([n, word]) => `${n} ${word}`)
 
   return (
     <section id="projects" className="relative scroll-mt-16 pt-24 sm:pt-32">
       <div className="gutter">
         <SectionHeading
           title="Projects"
-          note={`${projects.length} projects, ${live} live and ${wip} in development.${voyage ? " Scroll to travel between them." : ""}`}
+          note={`${projects.length} projects${states.length ? `, ${states.join(" and ")}` : ""}.${voyage ? " Scroll to travel between them." : ""}`}
         />
       </div>
 

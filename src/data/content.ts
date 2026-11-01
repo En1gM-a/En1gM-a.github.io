@@ -29,7 +29,8 @@ export type Project = {
   repo: string
   live?: string
   kind: string
-  status?: "live" | "wip"
+  /** live: up and linked; wip: in development; offline: built and working once, its backend no longer running */
+  status?: "live" | "wip" | "offline"
   preview: PreviewKind
   /** The destination planet this project is shown on in the Projects voyage */
   planet: { name: string; palette: Palette }
@@ -55,7 +56,7 @@ export const projects: Project[] = [
     code: "MSN-002",
     name: "Kuryentipid",
     kind: "Web app",
-    status: "live",
+    status: "offline",
     preview: "kuryentipid",
     planet: { name: "Volta", palette: { a: "#1e1b4b", b: "#4338ca", c: "#facc15", atmo: "#fde047" } },
     summary:
@@ -63,7 +64,6 @@ export const projects: Project[] = [
     highlights: ["Bill optimizer", "Monthly history charts", "Provider rate map"],
     stack: ["React", "Vite", "Tailwind", "Supabase", "Recharts", "Leaflet"],
     repo: gh("Kuryentipid"),
-    live: "https://kuryentipid.vercel.app",
   },
   {
     code: "MSN-003",

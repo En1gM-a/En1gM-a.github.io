@@ -1,0 +1,151 @@
+<!--
+  Clinic Management System demo (10 s loop; its screen is 1280x728, the inside of the site's terminal frame,
+  centred at top 36). Recreated from the app's Program.cs: the CLINIC banner and Login / Sign Up / Exit menu, the
+  dr_ username prefix, "Welcome, …!", the doctor menu, the appointment fields and statuses, the CONFIRM/CANCEL and
+  diagnosis prompts and their messages, and the arrow-key help line. Windows console colours, Consolas.
+  Laid out at 640x364 and drawn at 2x; coordinates are design pixels.
+-->
+<template>
+  <style>
+    @font-face { font-family: "Consolas Local"; src: local("Consolas"); }
+    #root { position: absolute; inset: 0; background: #030409; }
+    #c-stage { position: absolute; left: 0; top: 36px; width: 1280px; height: 728px; overflow: hidden; background: #0c0c0c; }
+    .c-screen { position: absolute; left: 0; top: 0; width: 640px; height: 364px; zoom: 2; overflow: hidden;
+      font-family: "Consolas Local", "JetBrains Mono", monospace; font-size: 9.5px; line-height: 13px; color: #cccccc; }
+    .c-cam { position: absolute; left: 0; top: 0; width: 640px; height: 364px; transform-origin: 0 0; background: #0c0c0c; }
+    .c-page { position: absolute; left: 0; top: 0; width: 640px; height: 364px; padding: 14px 18px; white-space: pre; }
+    .c-cy { color: #61d6d6; }
+    .c-gr { color: #16c60c; }
+    .c-ye { color: #f9f1a5; }
+    .c-dim { color: #767676; }
+    .c-sel { background: #cccccc; color: #0c0c0c; }
+    .c-center { text-align: center; }
+    .c-caret { display: inline-block; width: 6px; height: 11px; vertical-align: -2px; background: #cccccc; }
+  </style>
+  <div data-hf-id="hf-ye35" id="root" data-composition-id="clinic" data-width="1280" data-height="800">
+    <div data-hf-id="hf-exbx" id="c-stage">
+      <div data-hf-id="hf-ozg8" class="c-screen">
+        <div data-hf-id="hf-9l3s" class="c-cam" id="c-cam">
+<div data-hf-id="hf-u3ob" class="c-page c-center" id="c-menu"><span data-hf-id="hf-48vq" class="c-cy" style="display: inline-block; text-align: left">
+  ____ _     ___ _   _ ___ ____
+ / ___| |   |_ _| \ | |_ _/ ___|
+| |   | |    | ||  \| || | |
+| |___| |___ | || |\  || | |___
+ \____|_____|___|_| \_|___\____|
+</span>
+<span data-hf-id="hf-wzf9" class="c-dim">Doctor · Patient · Secretary</span>
+
+
+<span data-hf-id="hf-9dma" id="c-m0">     Login     </span>
+<span data-hf-id="hf-6fyq" id="c-m1">    Sign Up    </span>
+<span data-hf-id="hf-84kn" id="c-m2">     Exit      </span>
+
+
+
+
+
+
+
+
+
+<span data-hf-id="hf-s85u" class="c-dim">[↑↓Arrow keys to Navigate] [Enter to Select] [ESC to Go Back]</span></div>
+<div data-hf-id="hf-q5me" class="c-page" id="c-login"><span data-hf-id="hf-8m80" class="c-dim">-------------------------------------------------------------</span>
+                            <span data-hf-id="hf-nj4m" class="c-cy">LOGIN</span>
+<span data-hf-id="hf-bfy0" class="c-dim">-------------------------------------------------------------</span>
+
+Enter username: <span data-hf-id="hf-t75j" id="c-user"></span><span data-hf-id="hf-onw0" class="c-caret" id="c-k1"></span>
+<span data-hf-id="hf-dtjx" id="c-pl">Enter password: <span data-hf-id="hf-eft5" id="c-pass"></span><span data-hf-id="hf-xbrv" class="c-caret" id="c-k2"></span></span>
+
+<span data-hf-id="hf-17z8" class="c-gr" id="c-welcome">Welcome, dr_reyes!</span></div>
+<div data-hf-id="hf-bp3l" class="c-page" id="c-doc"><span data-hf-id="hf-a90x" class="c-dim">-------------------------------------------------------------</span>
+                    <span data-hf-id="hf-xay9" class="c-cy">DOCTOR MENU · dr_reyes</span>
+<span data-hf-id="hf-anby" class="c-dim">-------------------------------------------------------------</span>
+
+          <span data-hf-id="hf-ry8a" class="c-sel"> ► Check Appointment ◄ </span>
+             Add Schedule
+             Add Secretary
+             Remove Secretary
+             Log Out
+
+
+
+<span data-hf-id="hf-r2ja" class="c-dim">[↑↓Arrow keys to Navigate] [Enter to Select] [ESC to Go Back]</span></div>
+<div data-hf-id="hf-c5wf" class="c-page" id="c-appt"><span data-hf-id="hf-swee" class="c-cy">dr_reyes Appointments</span>
+┌────┬─────────────┬──────────────┬─────────────┬───────┬───────────────┬──────────────────┐
+│ #  │ Patient     │ Reason       │ Start       │ End   │ Status Doctor │ Status Secretary │
+├────┼─────────────┼──────────────┼─────────────┼───────┼───────────────┼──────────────────┤
+│ 1  │ pat_mendoza │ Fever, cough │ Nov 4 09:00 │ 09:30 │ <span data-hf-id="hf-vg7c" id="c-s1" class="c-ye">PENDING  </span>     │ <span data-hf-id="hf-jr9j" class="c-gr">CONFIRMED</span>        │
+│ 2  │ pat_lim     │ Follow-up    │ Nov 4 10:00 │ 10:30 │ <span data-hf-id="hf-2llz" class="c-gr">CONFIRMED</span>     │ <span data-hf-id="hf-27ay" class="c-gr">CONFIRMED</span>        │
+│ 3  │ pat_garcia  │ Check-up     │ Nov 5 14:00 │ 14:30 │ <span data-hf-id="hf-p7tm" class="c-ye">PENDING</span>       │ <span data-hf-id="hf-acce" class="c-ye">PENDING</span>          │
+└────┴─────────────┴──────────────┴─────────────┴───────┴───────────────┴──────────────────┘
+
+<span data-hf-id="hf-q8zf" id="c-l1">Enter appointment number: <span data-hf-id="hf-amwt" id="c-n1"></span></span>
+<span data-hf-id="hf-vpy9" id="c-l2">Enter action [CONFIRM/CANCEL]: <span data-hf-id="hf-qws2" id="c-act"></span></span>
+<span data-hf-id="hf-szml" id="c-l3" class="c-gr">Appointment confirmed successfully!</span>
+
+<span data-hf-id="hf-4fdp" id="c-l4">Enter appointment number to diagnose: <span data-hf-id="hf-el0u" id="c-n2"></span></span>
+<span data-hf-id="hf-s1ug" id="c-l5">Enter Diagnosis: <span data-hf-id="hf-3uey" id="c-dx"></span></span>
+<span data-hf-id="hf-kcuf" id="c-l6" class="c-gr">Patient Diagnosed Successfully!</span><span data-hf-id="hf-tdnu" class="c-caret" id="c-k3"></span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script>
+    ;(() => {
+      const { seg, keys, typed, caret, camera } = kit
+      const $ = (id) => document.getElementById(id)
+      const show = (id, on) => ($(id).style.opacity = on ? "1" : "0")
+      const CAM = [
+        { t: 0, z: 1, x: 320, y: 182 },
+        { t: 4.9, z: 1, x: 320, y: 182 },
+        { t: 5.4, z: 1.22, x: 262, y: 149 },
+        { t: 8.8, z: 1.22, x: 262, y: 149 },
+        { t: 9.3, z: 1, x: 320, y: 182 },
+      ]
+
+      const tl = kit.run(10, (t) => {
+        // The console clears between screens, as the app's Console.Clear() does
+        const screen = t < 1.5 || t >= 9.4 ? "c-menu" : t < 3.45 ? "c-login" : t < 4.45 ? "c-doc" : "c-appt"
+        for (const id of ["c-menu", "c-login", "c-doc", "c-appt"]) show(id, id === screen)
+
+        // Main menu: the arrow keys move the highlight, Enter picks Login
+        const sel = t < 0.5 || t >= 0.9 ? 0 : 1
+        for (let i = 0; i < 3; i++) {
+          const el = $(`c-m${i}`)
+          el.className = i === sel ? "c-sel" : ""
+          el.textContent = i === sel ? `  ► ${["Login", "Sign Up", "Exit"][i]} ◄  `.padEnd(15) : `    ${["Login", "Sign Up", "Exit"][i]}    `.padEnd(15)
+        }
+
+        // Login
+        const user = typed("dr_reyes", t, 1.7, 18)
+        $("c-user").textContent = user
+        $("c-k1").style.opacity = String(t < 2.25 ? caret(t, user.length < 8) : 0)
+        show("c-pl", t >= 2.3)
+        $("c-pass").textContent = "*".repeat(Math.max(0, Math.min(8, Math.floor((t - 2.4) * 20))))
+        $("c-k2").style.opacity = String(t >= 2.3 && t < 2.95 ? caret(t, t < 2.8) : 0)
+        show("c-welcome", t >= 3.0)
+
+        // Appointments: confirm number 1, then diagnose it
+        show("c-l1", t >= 4.85)
+        $("c-n1").textContent = t >= 5.0 ? "1" : ""
+        show("c-l2", t >= 5.25)
+        $("c-act").textContent = typed("CONFIRM", t, 5.4, 14)
+        show("c-l3", t >= 6.2)
+        const ok = t >= 6.4
+        $("c-s1").textContent = ok ? "CONFIRMED" : "PENDING  "
+        $("c-s1").className = ok ? "c-gr" : "c-ye"
+        show("c-l4", t >= 6.8)
+        $("c-n2").textContent = t >= 6.95 ? "1" : ""
+        show("c-l5", t >= 7.15)
+        $("c-dx").textContent = typed("Acute bronchitis", t, 7.25, 22)
+        show("c-l6", t >= 8.3)
+        $("c-k3").style.opacity = String(t >= 8.3 ? caret(t, false) : 0)
+
+        const k = keys(CAM, t)
+        $("c-cam").style.transform = camera(k.z, k.x, k.y, 640, 364)
+      })
+      window.__timelines = window.__timelines || {}
+      window.__timelines["clinic"] = tl
+    })()
+  </script>
+</template>

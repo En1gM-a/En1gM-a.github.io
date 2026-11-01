@@ -30,14 +30,18 @@ There are two photos. [`public/karl-grad.webp`](public/karl-grad.webp) is the gr
 
 Each project also has a `planet` (name and colour palette) for its stop in the voyage; set `wip: true` in the palette to give a planet the amber "under construction" ring.
 
-Each project has a `preview` key that picks a component in [`src/components/previews/index.tsx`](src/components/previews/index.tsx):
+Each project has a `preview` key that picks its demo in [`src/components/previews/index.tsx`](src/components/previews/index.tsx): a 10 s loop of the app being used, inside a browser, window, phone or terminal frame, labelled "Recreated preview" on the card. The clips play only while their card is in view; with reduced motion they show a still.
 
-| Preview | What it shows |
-| --- | --- |
-| `kuryentipid` | A real screenshot of the live site ([`public/projects/kuryentipid.webp`](public/projects/kuryentipid.webp)) |
-| `sugbo`, `planado`, `minutemeeting`, `pantawid`, `clinic` | Animated recreations of each app, built from its README and labelled "Recreated preview" on the card |
+The demos are a [HyperFrames](https://hyperframes.heygen.com) project in [`demos/`](demos), one scene per app in `demos/compositions/`, each rebuilt from that app's own code (its screens, labels and colours). Kuryentipid opens on its real sign-in screen and ends on its paused backend; Sugbo Now, still in development, shows the product as planned. To change one, edit its scene, then render the reel and cut it into the clips (needs FFmpeg):
 
-To use a real screenshot for another project, save it to `public/projects/<name>.webp` and render it inside a `BrowserFrame` the same way `KuryentipidPreview` does.
+```bash
+cd demos
+npx hyperframes preview                                         # look at it, or edit in the HyperFrames app
+npx hyperframes render --quality delivery --crf 10 --output renders/demos.mp4
+node cut.mjs renders/demos.mp4                                  # writes src/media/demos/<name>.mp4 and .webp
+```
+
+`status` sets a project's badge: `live`, `wip` (in development) or `offline` (Backend paused).
 
 ## Deploy
 
