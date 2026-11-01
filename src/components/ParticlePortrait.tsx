@@ -98,23 +98,28 @@ void main() {
   vec2 knocked = mat2(cos(spread), sin(spread), -sin(spread), cos(spread)) * sweep * (0.6 + h2 * 0.8);
   vel += (uRight * knocked.x + uUp * knocked.y) * 0.16 + vec3(0.0, 0.0, (h2 - 0.5) * stir * 0.12);
 
-  // Home on a spring, pulling harder from far away; it goes slack while the rock is loose or being swept
+  // Home on a spring. Knocked loose, a rock hangs on a faint tether instead, so it sails off as if in open space
+  // and swings back; while it is still away the pull stays gentle, so it drifts home instead of snapping back,
+  // and only takes hold again once it is near. Flying in, the pull grows with the distance
+  float flying = 1.0 - smoothstep(${SETTLE.toFixed(1)}, ${(SETTLE + 1).toFixed(1)}, uTime);
   vec3 home = target.xyz - p.xyz;
-  float give = clamp((1.0 - stir * 0.55) * (1.0 - loose * 0.85), 0.08, 1.0);
-  float pull = 0.6 * (1.0 + length(home) * 0.5 * (1.0 - loose)) * give * step(target.w, uTime);
+  float near = 1.0 - smoothstep(0.4, 2.5, length(home));
+  float give = clamp((1.0 - stir * 0.55) * mix(0.035, 1.0, (1.0 - loose) * (1.0 - loose)), 0.03, 1.0);
+  give = min(give, mix(mix(0.12, 1.0, near), 1.0, flying));
+  float pull = 0.6 * (1.0 + length(home) * 0.5 * flying) * give * step(target.w, uTime);
   vel += home * pull * uDelta;
 
   // A slow current through the whole sculpture, livelier where the pointer stirs it. Far gentler than on
   // emotion's glyph (0.0025): at rest it moves a rock less than the gap between rocks, so the features still read
   vel += bitangentNoise(p.xyz * 0.9 + vec3(0.0, 0.0, uTime * 0.5)) * 0.0002 * (1.0 + stir * 6.0) * uDelta * 60.0;
 
-  // Knocked loose, a rock coasts as if in open space before the spring reels it back in
-  vel *= pow(mix(0.93, 0.965, loose), uDelta * 60.0);
+  // Knocked loose, a rock coasts with next to nothing slowing it, as in open space
+  vel *= pow(mix(0.93, 0.988, loose), uDelta * 60.0);
   vel *= min(1.0, 0.8 / max(length(vel), 1e-4));
 
-  // Knocked loose at once, and it drifts loose for about a second before the spring takes it back
+  // Knocked loose at once, and it stays loose for about three seconds
   float knock = clamp(stir * 2.5, 0.0, 1.0);
-  loose = knock > loose ? mix(loose, knock, min(1.0, uDelta * 15.0)) : loose - uDelta / 1.0;
+  loose = knock > loose ? mix(loose, knock, min(1.0, uDelta * 15.0)) : loose - uDelta / 3.0;
   gl_FragColor = vec4(vel, clamp(loose, 0.0, 1.0));
 }
 `
@@ -128,7 +133,7 @@ void main() {
   vec4 v = texture2D(textureVelocity, uv);
   // Flung or knocked loose, it flares at once, then cools slowly. Speed alone only warms it violet, so the
   // fly-in streams in calmly over the intro's hand-off; burning out white takes the pointer knocking it loose
-  float heat = clamp(min((length(v.xyz) - 0.05) * 2.5, 0.4) + v.w * 0.7, 0.0, 1.0);
+  float heat = clamp(min((length(v.xyz) - 0.05) * 2.5, 0.4) + v.w * v.w * 0.7, 0.0, 1.0);
   float glow = mix(p.w, heat, min(1.0, uDelta * (heat > p.w ? 12.0 : 3.0)));
   gl_FragColor = vec4(p.xyz + v.xyz * uDelta * 60.0, glow);
 }
