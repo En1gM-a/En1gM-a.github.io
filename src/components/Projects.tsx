@@ -113,7 +113,7 @@ function Preview({ project, live = true }: { project: Project; live?: boolean })
         </Fit>
         <motion.div aria-hidden className="pointer-events-none absolute inset-0 rounded-xl" style={{ background: glare }} />
         <span
-          className="label absolute -bottom-3 left-4 rounded-full border border-line bg-void/90 px-3 py-1.5 text-[10px] whitespace-nowrap @max-[15rem]:-bottom-2 @max-[15rem]:left-2 @max-[15rem]:px-2 @max-[15rem]:py-1 @max-[15rem]:text-[8px]"
+          className="label absolute -bottom-3 left-4 rounded-full border border-line bg-void/90 px-3 py-1.5 text-[10px] whitespace-nowrap @max-[22rem]:left-2 @max-[22rem]:px-2 @max-[22rem]:py-1 @max-[22rem]:text-[8px] @max-[22rem]:tracking-[0.16em] @max-[15rem]:-bottom-2 @max-[15rem]:left-2 @max-[15rem]:px-2 @max-[15rem]:py-1 @max-[15rem]:text-[8px]"
           style={{ transform: "translateZ(50px)" }}
         >
           Recreated preview

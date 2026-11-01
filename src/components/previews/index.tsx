@@ -61,8 +61,10 @@ export function ProjectPreview({ kind, play }: { kind: PreviewKind; play: boolea
       )
     case "planado":
       return (
-        <div className="flex h-full items-center justify-center">
-          <div className="h-full w-[46%] max-w-[230px]">
+        // Right of centre, so the card's "Recreated preview" tag sits beside the phone instead of over it
+        <div className="flex h-full items-center justify-end pr-[6%]">
+          {/* Shaped like the clip (544x800 inside the frame's 6px bezel), so none of the phone's screen is cut off */}
+          <div className="aspect-[0.692] h-full">
             <PhoneFrame>
               <Demo src={planado} poster={planadoPoster} play={play} />
             </PhoneFrame>

@@ -2,196 +2,169 @@
   Planado demo (10 s loop; its screen is 544x800, the inside of the site's phone frame, centred at left 368).
   Recreated from the app's code: app/(tabs)/home.tsx, app/event/create.tsx, app/(tabs)/calendar.tsx and the
   Android widget (PlanadoWidgetProvider.kt), with their labels and colours (#5B5CE2, #23234D, #C9CAFF, #FFD089,
-  #7BE3BA and the event colours). Laid out at 272x400 and drawn at 2x; coordinates are design pixels.
+  #7BE3BA and the event colours).
+  Laid out at 217.6x320 and drawn at 2.5x, so its type sits at a real phone's proportions and still reads when the
+  card shows the phone small; every screen keeps clear of the frame's rounded corners and notch.
+  Coordinates are design pixels.
 -->
 <template>
   <style>
     #root { position: absolute; inset: 0; background: #030409; }
     #p-stage { position: absolute; left: 368px; top: 0; width: 544px; height: 800px; overflow: hidden; background: #f6f6fb; }
-    .p-screen { position: absolute; left: 0; top: 0; width: 272px; height: 400px; zoom: 2; overflow: hidden;
+    .p-screen { position: absolute; left: 0; top: 0; width: 217.6px; height: 320px; zoom: 2.5; overflow: hidden;
       font-family: Roboto, sans-serif; color: #23234d; }
-    .p-page { position: absolute; left: 0; top: 0; width: 272px; height: 400px; background: #f6f6fb; overflow: hidden; }
+    .p-page { position: absolute; left: 0; top: 0; width: 217.6px; height: 320px; background: #f6f6fb; overflow: hidden; }
     .p-abs { position: absolute; }
-    .p-status { position: absolute; left: 16px; right: 16px; top: 6px; height: 12px; display: flex; justify-content: space-between; align-items: center;
-      font-size: 8px; font-weight: 700; }
-    .p-label { position: absolute; left: 16px; font-size: 9.5px; font-weight: 700; }
+    .p-status { position: absolute; left: 18px; right: 18px; top: 8px; height: 10px; display: flex; justify-content: space-between; align-items: center;
+      font-size: 7.5px; font-weight: 700; }
     .p-muted { color: #6b6b8f; }
-    .p-day { position: absolute; top: 176px; width: 32px; height: 38px; border-radius: 10px; background: #fff; text-align: center; }
-    .p-day small { display: block; margin-top: 5px; font-size: 6px; color: #8a8aa8; }
-    .p-day b { display: block; font-size: 10px; }
-    .p-day i { display: inline-block; width: 3.5px; height: 3.5px; border-radius: 50%; margin: 1px 0.5px 0; }
-    .p-act { position: absolute; top: 222px; width: 78px; height: 42px; border-radius: 12px; padding: 7px 8px; font-size: 7.5px; font-weight: 700; }
-    .p-act span { display: grid; place-items: center; width: 16px; height: 16px; border-radius: 6px; margin-bottom: 3px; font-size: 11px; line-height: 1; }
-    .p-group { position: absolute; left: 14px; width: 244px; height: 32px; border-radius: 12px; background: #fff; display: flex; align-items: center; gap: 8px; padding: 0 8px; }
-    .p-group i { width: 18px; height: 18px; border-radius: 6px; }
-    .p-group b { font-size: 8.5px; }
-    .p-group small { display: block; font-size: 6.5px; color: #8a8aa8; }
-    .p-tabs { position: absolute; left: 0; right: 0; bottom: 0; height: 36px; background: #fff; border-top: 1px solid #ececf6; display: flex; justify-content: space-around;
-      align-items: center; font-size: 6px; color: #9a9ab8; text-align: center; }
-    .p-tabs svg { display: block; margin: 0 auto 2px; width: 13px; height: 13px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-    .p-field { position: absolute; left: 14px; width: 244px; height: 34px; border-radius: 10px; background: #fff; border: 1.5px solid #e3e3f2; padding: 5px 9px; }
-    .p-field small { display: block; font-size: 6.5px; color: #8a8aa8; }
-    .p-field div { margin-top: 2px; font-size: 9px; font-weight: 500; }
-    .p-caret { display: inline-block; width: 1.5px; height: 9px; margin-left: 1px; vertical-align: -1px; background: #5b5ce2; }
-    .p-chip { position: absolute; height: 18px; padding: 0 8px; border-radius: 9px; background: #fff; border: 1px solid #e3e3f2; font-size: 7px; font-weight: 500;
-      display: flex; align-items: center; white-space: nowrap; }
-    .p-cell { position: absolute; width: 34px; height: 30px; text-align: center; font-size: 8px; padding-top: 6px; }
-    .p-cell i { display: inline-block; width: 3.5px; height: 3.5px; border-radius: 50%; margin: 2px 0.5px 0; }
-    #p-touch { position: absolute; left: -15px; top: -15px; width: 30px; height: 30px; border-radius: 50%; background: rgb(91 92 226 / 0.22); border: 1.5px solid rgb(91 92 226 / 0.6); }
+    .p-h { position: absolute; left: 14px; font-size: 10.5px; font-weight: 700; }
+    .p-act { position: absolute; top: 158px; width: 59px; height: 52px; border-radius: 14px; padding: 8px; font-size: 8.5px; font-weight: 700; line-height: 1.1; }
+    .p-act span { display: grid; place-items: center; width: 18px; height: 18px; border-radius: 7px; margin-bottom: 5px; font-size: 12px; line-height: 1; }
+    .p-group { position: absolute; left: 12px; right: 12px; height: 24px; border-radius: 10px; background: #fff; display: flex; align-items: center; gap: 7px; padding: 0 8px; }
+    .p-group i { flex: none; width: 13px; height: 13px; border-radius: 5px; }
+    .p-group b { font-size: 9px; }
+    .p-group small { margin-left: auto; font-size: 7px; color: #8a8aa8; }
+    .p-tabs { position: absolute; left: 0; right: 0; bottom: 0; height: 34px; padding-bottom: 6px; background: #fff; border-top: 1px solid #ececf6;
+      display: flex; justify-content: space-around; align-items: center; font-size: 6.5px; color: #9a9ab8; text-align: center; }
+    .p-tabs svg { display: block; margin: 0 auto 1px; width: 13px; height: 13px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .p-field { position: absolute; left: 12px; right: 12px; height: 38px; border-radius: 11px; background: #fff; border: 1.5px solid #e3e3f2; padding: 6px 10px; }
+    .p-field small { display: block; font-size: 7px; color: #8a8aa8; }
+    .p-field div { margin-top: 2px; font-size: 10.5px; font-weight: 500; white-space: nowrap; }
+    .p-caret { display: inline-block; width: 1.5px; height: 11px; margin-left: 1px; vertical-align: -2px; background: #5b5ce2; }
+    .p-chip { position: absolute; top: 160px; height: 22px; padding: 0 9px; border-radius: 11px; background: #fff; border: 1px solid #e3e3f2;
+      font-size: 8.5px; font-weight: 500; display: flex; align-items: center; white-space: nowrap; }
+    .p-cell { position: absolute; width: 27.6px; height: 23px; text-align: center; font-size: 8.5px; padding-top: 4px; }
+    .p-cell i { display: inline-block; width: 3.5px; height: 3.5px; border-radius: 50%; margin: 1px 0.5px 0; }
+    #p-touch { position: absolute; left: -13px; top: -13px; width: 26px; height: 26px; border-radius: 50%; background: rgb(91 92 226 / 0.22); border: 1.5px solid rgb(91 92 226 / 0.6); }
   </style>
-  <div data-hf-id="hf-lenm" id="root" data-composition-id="planado" data-width="1280" data-height="800">
-    <div data-hf-id="hf-e3gi" id="p-stage">
-      <div data-hf-id="hf-wh8h" class="p-screen">
+  <div id="root" data-composition-id="planado" data-width="1280" data-height="800">
+    <div id="p-stage">
+      <div class="p-screen">
         <!-- Home (home.tsx) -->
-        <div data-hf-id="hf-646a" class="p-page" id="p-home">
-          <div data-hf-id="hf-ejyb" class="p-status"><span data-hf-id="hf-zwmt">9:41</span><svg data-hf-id="hf-3l7c" width="34" height="9" viewBox="0 0 34 9"><rect data-hf-id="hf-9bi2" x="0" y="5" width="2" height="4" rx="0.5" fill="#23234d" /><rect data-hf-id="hf-n5t6" x="3" y="3.5" width="2" height="5.5" rx="0.5" fill="#23234d" /><rect data-hf-id="hf-5az6" x="6" y="2" width="2" height="7" rx="0.5" fill="#23234d" /><rect data-hf-id="hf-jv4g" x="9" y="0.5" width="2" height="8.5" rx="0.5" fill="#23234d" /><rect data-hf-id="hf-o1iy" x="18" y="1" width="13" height="7" rx="2" fill="none" stroke="#23234d" /><rect data-hf-id="hf-8rjp" x="19.5" y="2.5" width="8" height="4" rx="1" fill="#23234d" /><rect data-hf-id="hf-0l16" x="32" y="3" width="1.5" height="3" rx="0.5" fill="#23234d" /></svg></div>
-          <div data-hf-id="hf-jcro" class="p-abs p-muted" style="left: 16px; top: 30px; font-size: 8.5px">Good morning,</div>
-          <div data-hf-id="hf-97bi" class="p-abs" style="left: 16px; top: 41px; font-size: 17px; font-weight: 700">Karl</div>
-          <div data-hf-id="hf-oo8v" class="p-abs" style="left: 230px; top: 32px; width: 26px; height: 26px; border-radius: 50%; background: #c9caff; color: #5b5ce2; font-size: 10px; font-weight: 700; display: grid; place-items: center">K</div>
-          <div data-hf-id="hf-dcr9" class="p-abs" style="left: 14px; top: 72px; width: 244px; height: 76px; border-radius: 16px; background: linear-gradient(135deg, #5b5ce2, #7c7df0); color: #fff; overflow: hidden">
-            <div data-hf-id="hf-fv1s" class="p-abs" style="right: -18px; top: -22px; width: 80px; height: 80px; border-radius: 50%; background: rgb(255 255 255 / 0.1)"></div>
-            <div data-hf-id="hf-4zod" class="p-abs" style="left: 14px; top: 12px; font-size: 6.5px; font-weight: 700; letter-spacing: 0.14em; opacity: 0.75">NEXT UP</div>
-            <div data-hf-id="hf-w8vx" class="p-abs" style="left: 14px; top: 24px; font-size: 13px; font-weight: 700">Capstone sync</div>
-            <div data-hf-id="hf-x1fy" class="p-abs" style="left: 14px; top: 42px; font-size: 7.5px; opacity: 0.85">Team Orbit · Today · 4:30 PM</div>
-            <div data-hf-id="hf-7ymx" class="p-abs" style="left: 14px; top: 55px; padding: 2.5px 7px; border-radius: 8px; background: rgb(255 255 255 / 0.2); font-size: 6.5px; font-weight: 700">View details →</div>
+        <div class="p-page" id="p-home">
+          <div class="p-status"><span>9:41</span><svg width="30" height="8" viewBox="0 0 34 9"><rect x="0" y="5" width="2" height="4" rx="0.5" fill="#23234d" /><rect x="3" y="3.5" width="2" height="5.5" rx="0.5" fill="#23234d" /><rect x="6" y="2" width="2" height="7" rx="0.5" fill="#23234d" /><rect x="9" y="0.5" width="2" height="8.5" rx="0.5" fill="#23234d" /><rect x="18" y="1" width="13" height="7" rx="2" fill="none" stroke="#23234d" /><rect x="19.5" y="2.5" width="8" height="4" rx="1" fill="#23234d" /></svg></div>
+          <div class="p-abs p-muted" style="left: 14px; top: 28px; font-size: 9px">Good morning,</div>
+          <div class="p-abs" style="left: 14px; top: 39px; font-size: 18px; font-weight: 700">Karl</div>
+          <div class="p-abs" style="right: 14px; top: 31px; width: 26px; height: 26px; border-radius: 50%; background: #c9caff; color: #5b5ce2; font-size: 11px; font-weight: 700; display: grid; place-items: center">K</div>
+          <div class="p-abs" style="left: 12px; right: 12px; top: 68px; height: 80px; border-radius: 16px; background: linear-gradient(135deg, #5b5ce2, #7c7df0); color: #fff; overflow: hidden">
+            <div class="p-abs" style="right: -18px; top: -22px; width: 76px; height: 76px; border-radius: 50%; background: rgb(255 255 255 / 0.1)"></div>
+            <div class="p-abs" style="left: 13px; top: 12px; font-size: 7px; font-weight: 700; letter-spacing: 0.14em; opacity: 0.75">NEXT UP</div>
+            <div class="p-abs" style="left: 13px; top: 24px; font-size: 14.5px; font-weight: 700">Capstone sync</div>
+            <div class="p-abs" style="left: 13px; top: 43px; font-size: 8.5px; opacity: 0.85">Team Orbit · Today · 4:30 PM</div>
+            <div class="p-abs" style="left: 13px; top: 57px; padding: 3px 8px; border-radius: 8px; background: rgb(255 255 255 / 0.2); font-size: 7.5px; font-weight: 700">View details →</div>
           </div>
-          <div data-hf-id="hf-4f2u" class="p-label" style="top: 160px">Your week</div>
-          <div data-hf-id="hf-zund" class="p-day" style="left: 14px"><small data-hf-id="hf-dv3f">M</small><b data-hf-id="hf-rxpx">2</b><i data-hf-id="hf-nggu" style="background: #4b82d0"></i></div>
-          <div data-hf-id="hf-71hq" class="p-day" style="left: 49px; background: #5b5ce2; color: #fff"><small data-hf-id="hf-93dg" style="color: rgb(255 255 255 / 0.7)">T</small><b data-hf-id="hf-sc0y">3</b><i data-hf-id="hf-9pvc" style="background: #fff"></i></div>
-          <div data-hf-id="hf-8i2e" class="p-day" style="left: 84px"><small data-hf-id="hf-9w15">W</small><b data-hf-id="hf-ubk3">4</b></div>
-          <div data-hf-id="hf-mlgl" class="p-day" style="left: 119px"><small data-hf-id="hf-b2y8">T</small><b data-hf-id="hf-upv4">5</b><i data-hf-id="hf-wxd4" style="background: #df823c"></i></div>
-          <div data-hf-id="hf-k9lg" class="p-day" style="left: 154px"><small data-hf-id="hf-kp7q">F</small><b data-hf-id="hf-tiy1">6</b></div>
-          <div data-hf-id="hf-bnx2" class="p-day" style="left: 189px"><small data-hf-id="hf-8at1">S</small><b data-hf-id="hf-tx92">7</b><i data-hf-id="hf-q0as" style="background: #d85b87"></i><i data-hf-id="hf-9eyi" style="background: #8a65c7"></i></div>
-          <div data-hf-id="hf-uxji" class="p-day" style="left: 224px"><small data-hf-id="hf-dgq1">S</small><b data-hf-id="hf-pjvr">8</b></div>
-          <div data-hf-id="hf-l78p" class="p-act" id="p-new" style="left: 14px; background: #5b5ce2; color: #fff"><span data-hf-id="hf-y82w" style="background: rgb(255 255 255 / 0.22)">+</span>New event</div>
-          <div data-hf-id="hf-e1fv" class="p-act" style="left: 97px; background: #fff3dc"><span data-hf-id="hf-zego" style="background: #ffd089; font-size: 8px">⇢</span>Join group</div>
-          <div data-hf-id="hf-6l0d" class="p-act" style="left: 180px; background: #e6f8f0"><span data-hf-id="hf-dm2c" style="background: #7be3ba; font-size: 9px">✦</span>New group</div>
-          <div data-hf-id="hf-qn1g" class="p-label" style="top: 276px">Your groups</div>
-          <div data-hf-id="hf-63zc" class="p-group" style="top: 292px"><i data-hf-id="hf-dq82" style="background: #4b82d0"></i><div data-hf-id="hf-yeow"><b data-hf-id="hf-069n">CpE 3A</b><small data-hf-id="hf-mzkk">12 members · 3 plans this week</small></div></div>
-          <div data-hf-id="hf-cmt5" class="p-group" style="top: 328px; height: 30px"><i data-hf-id="hf-84ny" style="background: #8a65c7"></i><div data-hf-id="hf-y7yw"><b data-hf-id="hf-0res">Team Orbit</b><small data-hf-id="hf-3mko">5 members · next: Capstone sync</small></div></div>
-          <div data-hf-id="hf-0fkd" class="p-tabs">
-            <div data-hf-id="hf-lpkg" style="color: #5b5ce2"><svg data-hf-id="hf-ulu9" viewBox="0 0 24 24"><path data-hf-id="hf-otdk" d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1Z" /></svg>Home</div>
-            <div data-hf-id="hf-mnx2"><svg data-hf-id="hf-1tol" viewBox="0 0 24 24"><rect data-hf-id="hf-nq85" x="3" y="4" width="18" height="17" rx="2" /><path data-hf-id="hf-t43n" d="M3 9h18M8 2v4M16 2v4" /></svg>Calendar</div>
-            <div data-hf-id="hf-4kq8"><svg data-hf-id="hf-30lo" viewBox="0 0 24 24"><circle data-hf-id="hf-1jcf" cx="9" cy="8" r="3.5" /><path data-hf-id="hf-vhpv" d="M2.5 20a6.5 6.5 0 0 1 13 0M16 4.5a3.5 3.5 0 0 1 0 7M18 14a6 6 0 0 1 3.5 6" /></svg>Groups</div>
-            <div data-hf-id="hf-diqt"><svg data-hf-id="hf-2man" viewBox="0 0 24 24"><circle data-hf-id="hf-jnj3" cx="12" cy="8" r="4" /><path data-hf-id="hf-8iu3" d="M4 21a8 8 0 0 1 16 0" /></svg>Profile</div>
+          <div class="p-act" id="p-new" style="left: 12px; background: #5b5ce2; color: #fff"><span style="background: rgb(255 255 255 / 0.22)">+</span>New event</div>
+          <div class="p-act" style="left: 79.3px; background: #fff3dc"><span style="background: #ffd089; font-size: 9px">⇢</span>Join group</div>
+          <div class="p-act" style="left: 146.6px; background: #e6f8f0"><span style="background: #7be3ba; font-size: 10px">✦</span>New group</div>
+          <div class="p-h" style="top: 218px">Your groups</div>
+          <div class="p-group" style="top: 233px"><i style="background: #4b82d0"></i><b>CpE 3A</b><small>12 members</small></div>
+          <div class="p-group" style="top: 260px"><i style="background: #8a65c7"></i><b>Team Orbit</b><small>5 members</small></div>
+          <div class="p-tabs">
+            <div style="color: #5b5ce2"><svg viewBox="0 0 24 24"><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1Z" /></svg>Home</div>
+            <div><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="17" rx="2" /><path d="M3 9h18M8 2v4M16 2v4" /></svg>Calendar</div>
+            <div><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5" /><path d="M2.5 20a6.5 6.5 0 0 1 13 0M16 4.5a3.5 3.5 0 0 1 0 7M18 14a6 6 0 0 1 3.5 6" /></svg>Groups</div>
+            <div><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4" /><path d="M4 21a8 8 0 0 1 16 0" /></svg>Profile</div>
           </div>
         </div>
 
         <!-- New event (event/create.tsx) -->
-        <div data-hf-id="hf-aoof" class="p-page" id="p-create">
-          <div data-hf-id="hf-x24j" class="p-status"><span data-hf-id="hf-rk89">9:41</span><span data-hf-id="hf-zcpu" style="font-size: 7px">● ● ▮</span></div>
-          <div data-hf-id="hf-l049" class="p-abs" style="left: 14px; top: 26px; font-size: 14px; font-weight: 700">‹&nbsp; New event</div>
-          <div data-hf-id="hf-h4ac" class="p-abs" style="left: 16px; top: 52px; font-size: 9.5px; font-weight: 700">Event details</div>
-          <div data-hf-id="hf-p515" class="p-abs p-muted" style="left: 16px; top: 65px; font-size: 7px">The essentials everyone needs</div>
-          <div data-hf-id="hf-ldj8" class="p-field" id="p-f-title" style="top: 80px"><small data-hf-id="hf-1vde">Title</small><div data-hf-id="hf-x11t"><span data-hf-id="hf-lrrj" id="p-title"></span><span data-hf-id="hf-krv2" class="p-caret" id="p-c1"></span><span data-hf-id="hf-ahsc" class="p-muted" id="p-ph1" style="font-weight: 400">Study session</span></div></div>
-          <div data-hf-id="hf-c9jn" class="p-field" id="p-f-loc" style="top: 120px"><small data-hf-id="hf-1h3n">Location</small><div data-hf-id="hf-xfcu"><span data-hf-id="hf-jkr7" id="p-loc"></span><span data-hf-id="hf-em59" class="p-caret" id="p-c2"></span><span data-hf-id="hf-os65" class="p-muted" id="p-ph2" style="font-weight: 400">Library, room, or link</span></div></div>
-          <div data-hf-id="hf-wpxa" class="p-abs" style="left: 16px; top: 164px; font-size: 9.5px; font-weight: 700">Category</div>
-          <div data-hf-id="hf-qxrq" class="p-chip" style="left: 14px; top: 180px">Hangout</div>
-          <div data-hf-id="hf-jbn8" class="p-chip" style="left: 63px; top: 180px">School</div>
-          <div data-hf-id="hf-i834" class="p-chip" id="p-study" style="left: 107px; top: 180px">Study</div>
-          <div data-hf-id="hf-7w1f" class="p-chip" style="left: 146px; top: 180px">Work</div>
-          <div data-hf-id="hf-f91q" class="p-chip" style="left: 182px; top: 180px">Deadline</div>
-          <div data-hf-id="hf-eog2" class="p-chip" style="left: 14px; top: 202px">Birthday</div>
-          <div data-hf-id="hf-wntq" class="p-chip" style="left: 65px; top: 202px">Gym</div>
-          <div data-hf-id="hf-k2zk" class="p-chip" style="left: 98px; top: 202px">Trip</div>
-          <div data-hf-id="hf-hdyg" class="p-chip" style="left: 130px; top: 202px">Personal</div>
-          <div data-hf-id="hf-5r1l" class="p-chip" style="left: 180px; top: 202px">Other</div>
-          <div data-hf-id="hf-f2kk" class="p-abs" style="left: 16px; top: 232px; font-size: 9.5px; font-weight: 700">Priority</div>
-          <div data-hf-id="hf-25ts" class="p-abs" style="left: 14px; top: 248px; width: 244px; height: 46px; border-radius: 12px; background: #fff; border: 1.5px solid #e3e3f2">
-            <div data-hf-id="hf-1yqj" class="p-abs" style="left: 10px; top: 8px; font-size: 8.5px; font-weight: 700">★ Important event</div>
-            <div data-hf-id="hf-uxet" class="p-abs p-muted" style="left: 10px; top: 21px; width: 180px; font-size: 6.5px; line-height: 1.35">Pins this event in the group widget with a days-left countdown.</div>
-            <div data-hf-id="hf-g89h" class="p-abs" id="p-tog" style="left: 206px; top: 14px; width: 28px; height: 16px; border-radius: 8px; background: #d9d9e8"><div data-hf-id="hf-kb0g" id="p-knob" class="p-abs" style="left: 2px; top: 2px; width: 12px; height: 12px; border-radius: 50%; background: #fff; box-shadow: 0 1px 2px rgb(0 0 0 / 0.25)"></div></div>
+        <div class="p-page" id="p-create">
+          <div class="p-status"><span>9:41</span><span style="font-size: 6.5px">● ● ▮</span></div>
+          <div class="p-abs" style="left: 14px; top: 26px; font-size: 14px; font-weight: 700">‹&nbsp; New event</div>
+          <div class="p-field" id="p-f-title" style="top: 52px"><small>Title</small><div><span id="p-title"></span><span class="p-caret" id="p-c1"></span><span class="p-muted" id="p-ph1" style="font-weight: 400">Study session</span></div></div>
+          <div class="p-field" id="p-f-loc" style="top: 96px"><small>Location</small><div><span id="p-loc"></span><span class="p-caret" id="p-c2"></span><span class="p-muted" id="p-ph2" style="font-weight: 400">Library, room, or link</span></div></div>
+          <div class="p-h" style="top: 143px">Category</div>
+          <div class="p-chip" id="p-study" style="left: 12px">Study</div>
+          <div class="p-chip" style="left: 58px">School</div>
+          <div class="p-chip" style="left: 109px">Hangout</div>
+          <div class="p-chip" style="left: 165px">Work</div>
+          <div class="p-abs" style="left: 12px; right: 12px; top: 192px; height: 52px; border-radius: 12px; background: #fff; border: 1.5px solid #e3e3f2">
+            <div class="p-abs" style="left: 10px; top: 8px; font-size: 9.5px; font-weight: 700">★ Important event</div>
+            <div class="p-abs p-muted" style="left: 10px; top: 22px; width: 136px; font-size: 7px; line-height: 1.35">Pins it in the group widget with a days-left countdown.</div>
+            <div class="p-abs" id="p-tog" style="right: 10px; top: 16px; width: 30px; height: 17px; border-radius: 9px; background: #d9d9e8"><div id="p-knob" class="p-abs" style="left: 2px; top: 2px; width: 13px; height: 13px; border-radius: 50%; background: #fff; box-shadow: 0 1px 2px rgb(0 0 0 / 0.25)"></div></div>
           </div>
-          <div data-hf-id="hf-7mt6" class="p-abs p-muted" style="left: 16px; top: 304px; font-size: 7px">When · <b data-hf-id="hf-ephq" style="color: #23234d">Fri, Nov 6</b> · 2:00 PM to 4:00 PM</div>
-          <div data-hf-id="hf-a9sc" class="p-abs p-muted" style="left: 16px; top: 318px; font-size: 7px">Planning space · <b data-hf-id="hf-vkrn" style="color: #23234d">Team Orbit</b></div>
-          <div data-hf-id="hf-lb2x" class="p-abs" id="p-create-btn" style="left: 14px; top: 352px; width: 244px; height: 32px; border-radius: 12px; background: #5b5ce2; color: #fff; font-size: 9px; font-weight: 700; display: grid; place-items: center">Create event</div>
+          <div class="p-abs p-muted" style="left: 14px; top: 253px; font-size: 8px">Fri, Nov 6 · 2:00 PM · <b style="color: #23234d">Team Orbit</b></div>
+          <div class="p-abs" id="p-create-btn" style="left: 12px; right: 12px; top: 274px; height: 32px; border-radius: 12px; background: #5b5ce2; color: #fff; font-size: 10.5px; font-weight: 700; display: grid; place-items: center">Create event</div>
         </div>
 
         <!-- Calendar (calendar.tsx) -->
-        <div data-hf-id="hf-y171" class="p-page" id="p-cal">
-          <div data-hf-id="hf-wnti" class="p-status"><span data-hf-id="hf-sr5c">9:41</span><span data-hf-id="hf-287a" style="font-size: 7px">● ● ▮</span></div>
-          <div data-hf-id="hf-4hvr" class="p-abs" style="left: 16px; top: 26px; font-size: 15px; font-weight: 700">Calendar</div>
-          <div data-hf-id="hf-b81a" class="p-abs" style="left: 232px; top: 26px; width: 24px; height: 24px; border-radius: 50%; background: #5b5ce2; color: #fff; font-size: 14px; display: grid; place-items: center">+</div>
-          <div data-hf-id="hf-cxmu" class="p-chip" style="left: 14px; top: 56px; background: #5b5ce2; border-color: #5b5ce2; color: #fff">All plans</div>
-          <div data-hf-id="hf-gftk" class="p-chip" style="left: 70px; top: 56px">CpE 3A</div>
-          <div data-hf-id="hf-r89q" class="p-chip" style="left: 118px; top: 56px">Team Orbit</div>
-          <div data-hf-id="hf-i722" class="p-abs" style="left: 16px; top: 86px; font-size: 10px; font-weight: 700">November 2026</div>
-          <div data-hf-id="hf-d31w" class="p-abs p-muted" style="left: 222px; top: 85px; font-size: 10px; letter-spacing: 8px">‹›</div>
-          <div data-hf-id="hf-1md0" class="p-abs p-muted" style="left: 14px; top: 104px; width: 238px; display: flex; justify-content: space-around; font-size: 6.5px"><span data-hf-id="hf-fmnq">S</span><span data-hf-id="hf-i0hw">M</span><span data-hf-id="hf-efqn">T</span><span data-hf-id="hf-e1fm">W</span><span data-hf-id="hf-5mxb">T</span><span data-hf-id="hf-k011">F</span><span data-hf-id="hf-wgd6">S</span></div>
-          <div data-hf-id="hf-k200" id="p-grid"></div>
-          <div data-hf-id="hf-iq52" class="p-abs" id="p-sel" style="left: 0; top: 0; width: 30px; height: 28px; border-radius: 9px; background: rgb(36 150 107 / 0.14); border: 1.5px solid #24966b"></div>
-          <div data-hf-id="hf-vgrw" class="p-abs" style="left: 16px; top: 278px; font-size: 8px; font-weight: 700">Fri, Nov 6</div>
-          <div data-hf-id="hf-yivj" class="p-abs" id="p-ev" style="left: 14px; top: 292px; width: 244px; height: 40px; border-radius: 12px; background: #fff; overflow: hidden">
-            <div data-hf-id="hf-eum6" class="p-abs" style="left: 0; top: 0; bottom: 0; width: 4px; background: #24966b"></div>
-            <div data-hf-id="hf-4obr" class="p-abs" style="left: 12px; top: 8px; font-size: 9px; font-weight: 700">Study session <span data-hf-id="hf-o8e5" style="color: #e9a23b">★</span></div>
-            <div data-hf-id="hf-hai9" class="p-abs p-muted" style="left: 12px; top: 22px; font-size: 7px">Library · 3F · 2:00 PM · Team Orbit</div>
+        <div class="p-page" id="p-cal">
+          <div class="p-status"><span>9:41</span><span style="font-size: 6.5px">● ● ▮</span></div>
+          <div class="p-abs" style="left: 14px; top: 26px; font-size: 16px; font-weight: 700">Calendar</div>
+          <div class="p-abs" style="right: 14px; top: 26px; width: 24px; height: 24px; border-radius: 50%; background: #5b5ce2; color: #fff; font-size: 14px; display: grid; place-items: center">+</div>
+          <div class="p-chip" style="left: 12px; top: 54px; height: 20px; background: #5b5ce2; border-color: #5b5ce2; color: #fff">All plans</div>
+          <div class="p-chip" style="left: 70px; top: 54px; height: 20px">Team Orbit</div>
+          <div class="p-abs" style="left: 14px; top: 84px; font-size: 11px; font-weight: 700">November 2026</div>
+          <div class="p-abs p-muted" style="left: 12px; right: 12px; top: 102px; display: flex; justify-content: space-around; font-size: 7px"><span>S</span><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span></div>
+          <div id="p-grid"></div>
+          <div class="p-abs" id="p-sel" style="left: 0; top: 0; width: 24px; height: 22px; border-radius: 8px; background: rgb(36 150 107 / 0.14); border: 1.5px solid #24966b"></div>
+          <div class="p-abs" id="p-ev" style="left: 12px; right: 12px; top: 240px; height: 46px; border-radius: 12px; background: #fff; overflow: hidden">
+            <div class="p-abs" style="left: 0; top: 0; bottom: 0; width: 4px; background: #24966b"></div>
+            <div class="p-abs" style="left: 12px; top: 9px; font-size: 10.5px; font-weight: 700">Study session <span style="color: #e9a23b">★</span></div>
+            <div class="p-abs p-muted" style="left: 12px; top: 25px; font-size: 8px">Fri, Nov 6 · 2:00 PM · Library · 3F</div>
           </div>
-          <div data-hf-id="hf-r3k0" class="p-abs p-muted" style="left: 16px; top: 342px; font-size: 6.5px">Dots use each event's color.</div>
         </div>
 
         <!-- The Android home screen and Planado's widget (PlanadoWidgetProvider.kt) -->
-        <div data-hf-id="hf-mx1s" class="p-page" id="p-launch" style="background: linear-gradient(160deg, #1d1d4f 0%, #3f40b8 55%, #8a65c7 100%)">
-          <div data-hf-id="hf-e317" class="p-status" style="color: #fff"><span data-hf-id="hf-scub">9:41</span><span data-hf-id="hf-2mib" style="font-size: 7px">● ● ▮</span></div>
-          <div data-hf-id="hf-fpym" class="p-abs" style="left: 18px; top: 34px; font-size: 30px; font-weight: 300; color: #fff">9:41</div>
-          <div data-hf-id="hf-o5gg" class="p-abs" style="left: 20px; top: 72px; font-size: 8px; color: rgb(255 255 255 / 0.8)">Tuesday, November 3</div>
-          <div data-hf-id="hf-yluo" class="p-abs" id="p-widget" style="left: 14px; top: 100px; width: 244px; height: 108px; border-radius: 20px; background: #fff; box-shadow: 0 12px 30px rgb(0 0 0 / 0.3)">
-            <div data-hf-id="hf-hrxf" class="p-abs" style="left: 14px; top: 12px; display: flex; align-items: center; gap: 5px; font-size: 8px; font-weight: 700"><img data-hf-id="hf-yxb6" src="assets/planado-logo.webp" width="14" height="14" alt="" />Planado</div>
-            <div data-hf-id="hf-3n4p" class="p-abs p-muted" style="right: 14px; top: 13px; font-size: 6.5px">Next up · Team Orbit</div>
-            <div data-hf-id="hf-3po5" class="p-abs" style="left: 14px; top: 34px; font-size: 15px; font-weight: 700">Study session</div>
-            <div data-hf-id="hf-1puv" class="p-abs p-muted" style="left: 14px; top: 55px; font-size: 7.5px">Fri, Nov 6 · 2:00 PM · Library · 3F</div>
-            <div data-hf-id="hf-t392" class="p-abs" id="p-count" style="left: 14px; top: 76px; padding: 4px 8px; border-radius: 9px; background: #ffd089; color: #6b3f00; font-size: 7.5px; font-weight: 700">★ 3 days left</div>
+        <div class="p-page" id="p-launch" style="background: linear-gradient(160deg, #1d1d4f 0%, #3f40b8 55%, #8a65c7 100%)">
+          <div class="p-status" style="color: #fff"><span>9:41</span><span style="font-size: 6.5px">● ● ▮</span></div>
+          <div class="p-abs" style="left: 16px; top: 30px; font-size: 30px; font-weight: 300; color: #fff">9:41</div>
+          <div class="p-abs" style="left: 18px; top: 68px; font-size: 8.5px; color: rgb(255 255 255 / 0.8)">Tuesday, November 3</div>
+          <div class="p-abs" id="p-widget" style="left: 12px; right: 12px; top: 92px; height: 116px; border-radius: 20px; background: #fff; box-shadow: 0 12px 30px rgb(0 0 0 / 0.3)">
+            <div class="p-abs" style="left: 13px; top: 12px; display: flex; align-items: center; gap: 5px; font-size: 8.5px; font-weight: 700"><img src="assets/planado-logo.webp" width="15" height="15" alt="" />Planado</div>
+            <div class="p-abs p-muted" style="right: 13px; top: 13px; font-size: 7px">Next up · Team Orbit</div>
+            <div class="p-abs" style="left: 13px; top: 34px; font-size: 17px; font-weight: 700">Study session</div>
+            <div class="p-abs p-muted" style="left: 13px; top: 57px; font-size: 8.5px">Fri, Nov 6 · 2:00 PM · Library · 3F</div>
+            <div class="p-abs" id="p-count" style="left: 13px; top: 80px; padding: 4px 9px; border-radius: 10px; background: #ffd089; color: #6b3f00; font-size: 8.5px; font-weight: 700">★ 3 days left</div>
           </div>
-          <div data-hf-id="hf-k0go" class="p-abs" style="left: 18px; top: 236px; width: 236px; display: grid; grid-template-columns: repeat(4, 1fr); row-gap: 14px; justify-items: center">
-            <i data-hf-id="hf-tg8e" style="width: 36px; height: 36px; border-radius: 12px; background: #fff url(assets/planado-logo.webp) center / 24px no-repeat"></i>
-            <i data-hf-id="hf-e93g" style="width: 36px; height: 36px; border-radius: 12px; background: #34a853"></i>
-            <i data-hf-id="hf-abrf" style="width: 36px; height: 36px; border-radius: 12px; background: #fbbc04"></i>
-            <i data-hf-id="hf-cd1b" style="width: 36px; height: 36px; border-radius: 12px; background: #ea4335"></i>
-            <i data-hf-id="hf-w0ff" style="width: 36px; height: 36px; border-radius: 12px; background: #4285f4"></i>
-            <i data-hf-id="hf-km60" style="width: 36px; height: 36px; border-radius: 12px; background: #ffffff33"></i>
-            <i data-hf-id="hf-vp5c" style="width: 36px; height: 36px; border-radius: 12px; background: #ffffff33"></i>
-            <i data-hf-id="hf-ui89" style="width: 36px; height: 36px; border-radius: 12px; background: #ffffff33"></i>
+          <div class="p-abs" style="left: 18px; right: 18px; top: 228px; display: grid; grid-template-columns: repeat(4, 1fr); row-gap: 12px; justify-items: center">
+            <i style="width: 32px; height: 32px; border-radius: 11px; background: #fff url(assets/planado-logo.webp) center / 22px no-repeat"></i>
+            <i style="width: 32px; height: 32px; border-radius: 11px; background: #34a853"></i>
+            <i style="width: 32px; height: 32px; border-radius: 11px; background: #fbbc04"></i>
+            <i style="width: 32px; height: 32px; border-radius: 11px; background: #ea4335"></i>
           </div>
-          <div data-hf-id="hf-xjxp" class="p-abs" style="left: 60px; top: 370px; width: 152px; height: 4px; border-radius: 2px; background: rgb(255 255 255 / 0.6)"></div>
+          <div class="p-abs" style="left: 68px; top: 304px; width: 82px; height: 3px; border-radius: 2px; background: rgb(255 255 255 / 0.6)"></div>
         </div>
 
-        <div data-hf-id="hf-80n1" id="p-touch"></div>
+        <div id="p-touch"></div>
       </div>
     </div>
   </div>
   <script>
     ;(() => {
-      const { seg, mix, ease, keys, typed, caret, press } = kit
+      const { seg, ease, keys, typed, caret, press } = kit
       const $ = (id) => document.getElementById(id)
 
       // The month grid: November 2026 starts on a Sunday; dots are each day's events, coloured as the app does
       const DOTS = { 2: ["#4b82d0"], 3: ["#5b5ce2"], 5: ["#df823c"], 7: ["#d85b87", "#8a65c7"], 10: ["#4b82d0"], 12: ["#df823c"], 14: ["#5b5ce2"], 18: ["#d85b87"], 20: ["#4b82d0", "#df823c"], 25: ["#8a65c7"], 28: ["#5b5ce2"] }
-      const cell = (d) => ({ x: 14 + ((d - 1) % 7) * 34, y: 116 + Math.floor((d - 1) / 7) * 31 })
-      const grid = $("p-grid")
+      const CELL = 193.6 / 7
+      const cell = (d) => ({ x: 12 + ((d - 1) % 7) * CELL, y: 112 + Math.floor((d - 1) / 7) * 24 })
       let html = ""
       for (let d = 1; d <= 30; d++) {
         const { x, y } = cell(d)
         const today = d === 3 ? "color: #fff; font-weight: 700" : ""
-        const bg = d === 3 ? `<span class="p-abs" style="left: 7px; top: 1px; width: 20px; height: 20px; border-radius: 50%; background: #5b5ce2"></span>` : ""
+        const ring = d === 3 ? `<span class="p-abs" style="left: 4.8px; top: 1px; width: 18px; height: 18px; border-radius: 50%; background: #5b5ce2"></span>` : ""
         const dots = (DOTS[d] ?? []).map((c) => `<i style="background: ${c}"></i>`).join("")
-        html += `<div class="p-cell" style="left: ${x}px; top: ${y}px">${bg}<span style="position: relative; ${today}">${d}</span><br />${dots}${d === 6 ? '<i id="p-newdot" style="background: #24966b"></i>' : ""}</div>`
+        html += `<div class="p-cell" style="left: ${x}px; top: ${y}px">${ring}<span style="position: relative; ${today}">${d}</span><br />${dots}${d === 6 ? '<i id="p-newdot" style="background: #24966b"></i>' : ""}</div>`
       }
-      grid.innerHTML = html
+      $("p-grid").innerHTML = html
       const sel = cell(6)
-      $("p-sel").style.left = `${sel.x + 2}px`
+      $("p-sel").style.left = `${sel.x + 1.8}px`
       $("p-sel").style.top = `${sel.y}px`
 
       // Taps: New event, the title, the location, Study, Important, Create event
       const TAPS = [
-        { t: 2.0, x: 53, y: 243 },
-        { t: 2.85, x: 120, y: 98 },
-        { t: 3.65, x: 120, y: 138 },
-        { t: 4.5, x: 125, y: 189 },
-        { t: 4.95, x: 220, y: 270 },
-        { t: 5.45, x: 136, y: 368 },
+        { t: 2.0, x: 42, y: 184 },
+        { t: 2.85, x: 100, y: 71 },
+        { t: 3.65, x: 100, y: 115 },
+        { t: 4.5, x: 32, y: 171 },
+        { t: 4.95, x: 190, y: 216 },
+        { t: 5.45, x: 109, y: 290 },
       ]
       const TITLE = "Study session"
       const LOC = "Library · 3F"
-      const W = 272
+      const W = 217.6
 
       const tl = kit.run(10, (t) => {
         // Screens push in from the right like a native stack: home → new event → calendar; then home screen, then back
@@ -199,7 +172,7 @@
         const toCal = ease.inOut(seg(t, 5.65, 6.05))
         const toLaunch = ease.inOut(seg(t, 7.3, 7.85))
         const back = ease.inOut(seg(t, 9.25, 9.85))
-        $("p-home").style.transform = `translateX(${-toCreate * W * 0.3 + back * 0}px)`
+        $("p-home").style.transform = `translateX(${-toCreate * W * 0.3}px)`
         $("p-home").style.opacity = String(toCreate < 1 ? 1 : back)
         $("p-create").style.transform = `translateX(${(1 - toCreate) * W - toCal * W * 0.3}px)`
         $("p-create").style.opacity = String(toCreate > 0 && toCal < 1 ? 1 : 0)
@@ -225,18 +198,16 @@
         $("p-study").style.borderColor = study ? "#24966b" : "#e3e3f2"
         const on = ease.out(seg(t, 5.0, 5.2))
         $("p-tog").style.background = on > 0.5 ? "#5b5ce2" : "#d9d9e8"
-        $("p-knob").style.transform = `translateX(${12 * on}px)`
+        $("p-knob").style.transform = `translateX(${13 * on}px)`
         $("p-create-btn").style.transform = `scale(${1 - 0.04 * press(t, 5.45)})`
 
         // The new event lands on Friday the 6th
-        const pop = ease.back(seg(t, 6.15, 6.5))
         $("p-sel").style.opacity = String(ease.out(seg(t, 6.1, 6.4)))
-        $("p-newdot").style.transform = `scale(${pop * 1.4})`
+        $("p-newdot").style.transform = `scale(${ease.back(seg(t, 6.15, 6.5)) * 1.4})`
         const ev = ease.out(seg(t, 6.35, 6.75))
         $("p-ev").style.opacity = String(ev)
         $("p-ev").style.transform = `translateY(${(1 - ev) * 8}px)`
-        const wid = ease.back(seg(t, 7.7, 8.15))
-        $("p-widget").style.transform = `scale(${0.9 + 0.1 * wid})`
+        $("p-widget").style.transform = `scale(${0.9 + 0.1 * ease.back(seg(t, 7.7, 8.15))})`
         $("p-count").style.transform = `scale(${1 + 0.08 * Math.sin(Math.PI * seg(t, 8.3, 8.8))})`
 
         // The touch indicator, around each tap
