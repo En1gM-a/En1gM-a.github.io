@@ -9,3 +9,4 @@ dist
 # HyperFrames: snapshots, history and renders stay local
 demos/.hyperframes/
 demos/renders/
+demos/.thumbnails/
