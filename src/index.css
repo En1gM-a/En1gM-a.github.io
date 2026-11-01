@@ -82,11 +82,15 @@ body {
     font-size: clamp(44px, 13.4vw, 220px);
   }
 
+  /* Brushed steel that stays light all the way down, so no part of a letter sinks into the rocks behind it.
+     The shadow sits behind the letters as a crisp dark edge and a soft dark pool, so the title holds over the
+     brightest fog in the film; text-shadow can't do it, it paints over a background-clipped fill */
   .silver {
-    background: linear-gradient(180deg, #ffffff 0%, #e4e7ef 38%, #9097aa 78%, #5d6376 100%);
+    background: linear-gradient(180deg, #ffffff 0%, var(--color-ink) 45%, #c3c9da 78%, var(--color-dim) 100%);
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
+    filter: drop-shadow(0 0.02em 0.03em rgb(3 4 9 / 0.8)) drop-shadow(0 0 0.35em rgb(3 4 9 / 0.5));
   }
 
   .label {
@@ -208,6 +212,7 @@ body {
     background: none;
     color: CanvasText;
     -webkit-text-fill-color: CanvasText;
+    filter: none;
   }
 }
 

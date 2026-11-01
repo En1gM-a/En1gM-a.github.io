@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react"
-import { AnimatePresence, motion, type Variants, useReducedMotion, useScroll, useTransform } from "motion/react"
+import { AnimatePresence, motion, type Variants, useIsPresent, useReducedMotion, useScroll, useTransform } from "motion/react"
 import { BigBang } from "./BigBang"
 import { Plasma } from "./Plasma"
 import { makeClumps } from "./cosmos"
@@ -14,9 +14,8 @@ const NAME = "KARL'S"
 const WORD = "PORTFOLIO"
 
 // The name glitch-decrypts in the way PORTFOLIO does, a letter about every 90 ms, then holds clean long
-// enough to read before PORTFOLIO takes over; a soft dark halo keeps it readable over the brightest fog
+// enough to read before PORTFOLIO takes over
 const NAME_IN = 550 // ms
-const HALO = "0 0.03em 0.5em rgba(3,4,9,0.85)"
 
 const LOG: [number, string, string][] = [
   [STAGE.spark, "singularity", "detected"],
@@ -140,7 +139,6 @@ function IntroStage({ stage, onSkip }: { stage: number; onSkip: () => void }) {
             className="silver glitch col-start-1 row-start-1 whitespace-nowrap [contain:inline-size]"
             data-text={name}
             data-glitch={name && name !== NAME ? "on" : "off"}
-            style={{ textShadow: HALO }}
           >
             {name}
           </span>
@@ -197,9 +195,16 @@ const filmOut: Variants = {
 function IntroFilm() {
   // Taken once, as the stage does, so the two always agree on whether there is a film
   const [film] = useState(() => filmUrl)
+  const ref = useRef<HTMLVideoElement>(null)
+  // Leaving, it slows as it fades, so it is still moving when the fade ends instead of stopping on its last frame
+  const present = useIsPresent()
+  useEffect(() => {
+    if (!present && ref.current) ref.current.playbackRate = 0.65
+  }, [present])
   if (!film) return null
   return (
     <motion.video
+      ref={ref}
       src={film}
       autoPlay
       muted

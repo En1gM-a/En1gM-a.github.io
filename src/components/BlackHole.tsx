@@ -43,7 +43,11 @@ function spaghettify() {
     while (getComputedStyle(part).display === "inline" && part.parentElement) part = part.parentElement
     found.add(part)
   }
-  const parts = [...found].filter((el) => ![...found].some((other) => other !== el && other.contains(el)))
+  // Only the outermost: a part inside another goes with it
+  const parts = [...found].filter((el) => {
+    for (let up = el.parentElement; up; up = up.parentElement) if (found.has(up)) return false
+    return true
+  })
   const falls: Animation[] = []
   for (const el of parts) {
     const r = el.getBoundingClientRect()
@@ -67,16 +71,21 @@ function spaghettify() {
     // The nearer a part is, the sooner the tide takes it; all of it is in by the time the hole passes the corners
     falls.push(el.animate(frames, { delay: (PULL_FROM + far * 0.3) * 1000, duration: (PULL - far * 0.3) * 1000, fill: "forwards" }))
   }
-  for (const el of document.querySelectorAll<HTMLElement>("[data-backdrop]"))
+  // The sky closes into a soft disc before it has turned far, so no straight edge or corner of it shows on the way
+  // down. It fades from its own brightness (it is dimmed behind some sections), so it doesn't flare as it goes
+  const sky = [...document.querySelectorAll<HTMLElement>("[data-backdrop]")]
+  for (const el of sky) {
+    Object.assign(el.style, { maskImage: "radial-gradient(closest-side, #000 55%, transparent)", maskPosition: "center", maskRepeat: "no-repeat" })
+    const timing = { delay: PULL_FROM * 1000, duration: PULL * 1000, fill: "both" } as const
     falls.push(
-      el.animate([{ transform: "rotate(0deg) scale(1)", opacity: 1 }, { transform: "rotate(110deg) scale(0.12)", opacity: 0 }], {
-        delay: PULL_FROM * 1000,
-        duration: PULL * 1000,
-        easing: ease,
-        fill: "forwards",
-      }),
+      el.animate([{ transform: "rotate(0deg) scale(1)", opacity: getComputedStyle(el).opacity }, { transform: "rotate(110deg) scale(0.12)", opacity: 0 }], { ...timing, easing: ease }),
+      el.animate([{ maskSize: "300% 300%" }, { maskSize: "100% 100%" }], { ...timing, duration: PULL * 400, easing: "ease-out" }),
     )
-  return () => falls.forEach((f) => f.cancel())
+  }
+  return () => {
+    falls.forEach((f) => f.cancel())
+    for (const el of sky) Object.assign(el.style, { maskImage: "", maskPosition: "", maskRepeat: "" })
+  }
 }
 
 /**
@@ -157,8 +166,10 @@ export function BlackHole({ onBlackout, onDone }: { onBlackout: () => void; onDo
           aria-hidden
           className="pointer-events-none fixed inset-0 z-[96] h-full w-full object-cover mix-blend-screen brightness-[.85]"
           initial={{ opacity: 0 }}
-          animate={{ opacity: reveal ? 0 : 1 }}
-          transition={reveal ? lift : { duration: 0.3 }}
+          // In over 0.3 s, and out over the last moments of the fall, so the screen sinks into the dark rather than
+          // cutting to it as the film's own black arrives
+          animate={reveal ? { opacity: 0 } : { opacity: [0, 1, 1, 0] }}
+          transition={reveal ? lift : { duration: FILM_BLACKOUT_AT / 1000, times: [0, 0.1, 0.82, 0.95], ease: ["easeOut", "linear", "easeIn"] }}
         />
       </>
     )

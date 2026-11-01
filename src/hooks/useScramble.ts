@@ -13,7 +13,11 @@ export function useScramble(from: string, to: string, run: boolean, duration = 9
   const [text, setText] = useState(from)
 
   useEffect(() => {
-    if (!run) return
+    // Stopped (the intro replaying), it goes back to where it starts, so the next run doesn't open on the old word
+    if (!run) {
+      setText(from)
+      return
+    }
     let raf = 0
     let lastSwap = 0
     const start = performance.now()

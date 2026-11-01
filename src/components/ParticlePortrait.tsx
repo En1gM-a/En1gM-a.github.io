@@ -241,9 +241,13 @@ void main() {
 export function ParticlePortrait({ src, active, instant = false }: { src: string; active: boolean; instant?: boolean }) {
   const ref = useRef<HTMLCanvasElement>(null)
   const reduce = useReducedMotion()
+  // Built while the loader is still up, so the hand-off from the intro only has to start it: `active` starts the
+  // fly-in, and switching it off again (a replayed intro) clears the sky and sets up a fresh one
+  const activeRef = useRef(active)
+  activeRef.current = active
+  const cue = useRef<(on: boolean) => void>(() => {})
 
   useEffect(() => {
-    if (!active) return
     const canvas = ref.current
     if (!canvas) return
     const coarse = window.matchMedia("(pointer: coarse)").matches
@@ -484,6 +488,9 @@ export function ParticlePortrait({ src, active, instant = false }: { src: string
     }
 
     const onResize = () => {
+      // Nothing to rebuild before the photo is in; before the fly-in it is rebuilt as a fresh one
+      if (!img.naturalWidth) return
+      if (!ready) built = false
       build()
       if (reduce) render(0, 0, true)
     }
@@ -508,6 +515,27 @@ export function ParticlePortrait({ src, active, instant = false }: { src: string
       else pause()
     })
 
+    let compiled = false
+    const begin = () => {
+      if (!compiled || ready) return
+      ready = true
+      start = performance.now() - (instant ? SETTLE * 1000 : 0)
+      // Reduced motion: a still sculpture, no fly-in, tumble, simulation, sweep or scatter
+      if (reduce) render(0, 0, true)
+      else play()
+      io.observe(canvas)
+    }
+    cue.current = (on) => {
+      if (on) return begin()
+      if (!ready) return
+      pause()
+      io.disconnect()
+      ready = false
+      built = false
+      build()
+      renderer.clear()
+    }
+
     img.onload = () => {
       build()
       // Every program compiles in the background, the simulation's too, so the hand-over from the intro never stutters.
@@ -522,12 +550,8 @@ export function ParticlePortrait({ src, active, instant = false }: { src: string
         .then(() => {
           passes.traverse((o) => o instanceof THREE.Mesh && o.geometry.dispose())
           if (disposed) return
-          ready = true
-          start = performance.now() - (instant ? SETTLE * 1000 : 0)
-          // Reduced motion: a still sculpture, no fly-in, tumble, simulation, sweep or scatter
-          if (reduce) render(0, 0, true)
-          else play()
-          io.observe(canvas)
+          compiled = true
+          if (activeRef.current) begin()
         })
     }
 
@@ -552,7 +576,9 @@ export function ParticlePortrait({ src, active, instant = false }: { src: string
       material.dispose()
       renderer.dispose()
     }
-  }, [active, src, reduce, instant])
+  }, [src, reduce, instant])
+
+  useEffect(() => cue.current(active), [active])
 
   // In front of the intro film, which plays on behind the page as it arrives
   return <canvas ref={ref} aria-hidden className="pointer-events-none absolute inset-0 z-[32] h-full w-full" />
